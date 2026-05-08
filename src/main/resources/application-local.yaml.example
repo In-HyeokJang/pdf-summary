@@ -1,0 +1,9 @@
+spring:
+  datasource:
+    url: jdbc:mariadb://localhost:3306/pdf_summary?characterEncoding=UTF-8&serverTimezone=Asia/Seoul
+    username: YOUR_DB_USERNAME
+    password: YOUR_DB_PASSWORD
+
+vllm:
+  base-url: http://YOUR_VLLM_SERVER_IP:8000
+  model: Qwen/Qwen2.5-14B-Instruct
