@@ -30,34 +30,29 @@ class PdfService(
             return PdfUploadResponse(id = existing.id, fileName = existing.fileName, summary = existing.summary, status = "CACHED")
         }
 
+        val tStart = System.currentTimeMillis()
         val originalText = pdfParserService.extractText(file)
         val chunks = pdfParserService.splitIntoChunks(originalText)
-        log.info("총 ${chunks.size}개 청크 병렬 번역 시작 (총 ${originalText.length}자)")
+        log.info("[TIMING] 파일: ${file.originalFilename}, 총 ${originalText.length}자, 청크 수: ${chunks.size}, 추출: ${System.currentTimeMillis() - tStart}ms")
 
+        val t0 = System.currentTimeMillis()
         val translatedChunks: List<String> = Flux.fromIterable(chunks.withIndex().toList())
             .flatMapSequential({ (i, chunk) ->
-                log.info("청크 번역 요청: ${i + 1}/${chunks.size}")
+                log.info("[TIMING] 청크 번역 요청: ${i + 1}/${chunks.size} (${chunk.length}자)")
                 vllmService.translateAsync(chunk, sourceLang)
-                    .doOnSuccess { log.info("청크 번역 완료: ${i + 1}/${chunks.size}") }
+                    .doOnSuccess { log.info("[TIMING] 청크 번역 완료: ${i + 1}/${chunks.size}") }
             }, chunks.size)
             .collectList()
             .block()!!
-        val translatedText = translatedChunks.joinToString("\n")
+        val translatedText = translatedChunks.joinToString("\n\n")
+        log.info("[TIMING] 번역 완료: ${(System.currentTimeMillis() - t0) / 1000}초 (${chunks.size}개 청크)")
 
-        log.info("청크별 요약 시작...")
-        val chunkSummaries: List<String> = Flux.fromIterable(translatedChunks.withIndex().toList())
-            .flatMapSequential({ (i, translated) ->
-                log.info("청크 요약 요청: ${i + 1}/${translatedChunks.size}")
-                vllmService.summarizeAsync(translated)
-                    .doOnSuccess { log.info("청크 요약 완료: ${i + 1}/${translatedChunks.size}") }
-            }, translatedChunks.size)
-            .collectList()
-            .block()!!
-
-        log.info("최종 요약 생성 중...")
-        val summaryInput = chunkSummaries.joinToString("\n").take(8000) // ~4000 tokens 안전 범위
+        val t1 = System.currentTimeMillis()
+        val summaryInput = translatedText.take(6000)
+        log.info("[TIMING] 요약 입력: ${summaryInput.length}자 (번역본 전체의 ${String.format("%.0f", summaryInput.length * 100.0 / translatedText.length.coerceAtLeast(1))}%)")
         val summary = vllmService.summarize(summaryInput)
-        log.info("요약 완료.")
+        log.info("[TIMING] 요약 완료: ${(System.currentTimeMillis() - t1) / 1000}초")
+        log.info("[TIMING] 전체 소요: ${(System.currentTimeMillis() - tStart) / 1000}초")
 
         val saved = repository.save(
             PdfDocument(

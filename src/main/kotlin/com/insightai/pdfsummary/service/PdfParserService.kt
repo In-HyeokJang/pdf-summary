@@ -10,17 +10,34 @@ class PdfParserService {
 
     fun extractText(file: MultipartFile): String {
         Loader.loadPDF(file.bytes).use { doc ->
-            return PDFTextStripper().getText(doc).trim()
+            return PDFTextStripper().getText(doc)
+                .replace('�', ' ')
+                .trim()
         }
     }
 
-    fun splitIntoChunks(text: String, chunkSize: Int = 2500): List<String> {
+    fun splitIntoChunks(text: String, maxChunkSize: Int = 2500): List<String> {
+        val paragraphs = text.split(Regex("\n{2,}")).map { it.trim() }.filter { it.isNotEmpty() }
         val chunks = mutableListOf<String>()
-        var start = 0
-        while (start < text.length) {
-            chunks.add(text.substring(start, minOf(start + chunkSize, text.length)))
-            start += chunkSize
+        val current = StringBuilder()
+
+        for (para in paragraphs) {
+            if (current.isNotEmpty() && current.length + para.length + 2 > maxChunkSize) {
+                chunks.add(current.toString().trim())
+                current.clear()
+            }
+            if (para.length > maxChunkSize) {
+                if (current.isNotEmpty()) { chunks.add(current.toString().trim()); current.clear() }
+                var start = 0
+                while (start < para.length) {
+                    chunks.add(para.substring(start, minOf(start + maxChunkSize, para.length)))
+                    start += maxChunkSize
+                }
+            } else {
+                current.append(para).append("\n\n")
+            }
         }
+        if (current.isNotEmpty()) chunks.add(current.toString().trim())
         return chunks
     }
 }

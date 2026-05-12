@@ -5,11 +5,16 @@ spring:
   config:
     import: optional:classpath:application-local.yaml
 
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 110MB
+
   datasource:
-    url: ${DB_URL:jdbc:mariadb://localhost:3306/pdf_summary?characterEncoding=UTF-8&serverTimezone=Asia/Seoul}
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/pdf_summary}
     username: ${DB_USERNAME:sa}
     password: ${DB_PASSWORD:}
-    driver-class-name: org.mariadb.jdbc.Driver
+    driver-class-name: org.postgresql.Driver
 
   jpa:
     hibernate:
@@ -17,7 +22,7 @@ spring:
     show-sql: true
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.MariaDBDialect
+        dialect: org.hibernate.dialect.PostgreSQLDialect
 
   sql:
     init:
@@ -30,5 +35,6 @@ server:
       tracking-modes: cookie
 
 vllm:
-  base-url: ${VLLM_BASE_URL:http://localhost:8000}
-  model: ${VLLM_MODEL:Qwen/Qwen2.5-14B-Instruct}
+  default-base-url: ${VLLM_BASE_URL:http://localhost:8000}
+  default-model: ${VLLM_MODEL:Qwen/Qwen2.5-14B-Instruct}
+  language-models: {}

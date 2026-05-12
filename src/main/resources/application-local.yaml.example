@@ -1,9 +1,19 @@
 spring:
   datasource:
-    url: jdbc:mariadb://localhost:3306/pdf_summary?characterEncoding=UTF-8&serverTimezone=Asia/Seoul
+    url: jdbc:postgresql://YOUR_DB_HOST:5432/pdf_summary
     username: YOUR_DB_USERNAME
     password: YOUR_DB_PASSWORD
 
 vllm:
-  base-url: http://YOUR_VLLM_SERVER_IP:8000
-  model: Qwen/Qwen2.5-14B-Instruct
+  default-base-url: http://YOUR_VLLM_SERVER_IP:8000
+  default-model: YOUR_DEFAULT_MODEL
+  language-models:
+    EN:
+      base-url: http://YOUR_VLLM_SERVER_IP:8001
+      model: YOUR_EN_MODEL
+    ZH:
+      base-url: http://YOUR_VLLM_SERVER_IP:8000
+      model: YOUR_ZH_MODEL
+    JA:
+      base-url: http://YOUR_VLLM_SERVER_IP:8000
+      model: YOUR_JA_MODEL

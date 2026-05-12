@@ -18,10 +18,10 @@ class PdfDocument(
     @Column(name = "origin_lang", length = 10)
     val originLang: String?,
 
-    @Lob @Column(name = "original_text", columnDefinition = "LONGTEXT")
+    @Lob @Column(name = "original_text", columnDefinition = "TEXT")
     val originalText: String?,
 
-    @Lob @Column(name = "translated_text", columnDefinition = "LONGTEXT")
+    @Lob @Column(name = "translated_text", columnDefinition = "TEXT")
     val translatedText: String?,
 
     @Lob @Column(name = "summary", columnDefinition = "TEXT")

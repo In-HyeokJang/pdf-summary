@@ -47,7 +47,7 @@ class PageController(
         val pdfBytes = pdfExportService.export(doc)
         val filename = doc.fileName.removeSuffix(".pdf") + "_번역.pdf"
         response.contentType = "application/pdf"
-        response.setHeader("Content-Disposition", "attachment; filename*=UTF-8''${java.net.URLEncoder.encode(filename, "UTF-8")}")
+        response.setHeader("Content-Disposition", "attachment; filename*=UTF-8''${java.net.URLEncoder.encode(filename, "UTF-8").replace("+", "%20")}")
         response.outputStream.write(pdfBytes)
     }
 }

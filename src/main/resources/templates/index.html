@@ -6,45 +6,54 @@
     <title>PDF 번역/요약 시스템</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Segoe UI', sans-serif; background: #f5f6fa; color: #333; }
-        .container { max-width: 900px; margin: 40px auto; padding: 0 20px; }
-        h1 { font-size: 1.8rem; margin-bottom: 8px; color: #2c3e50; }
-        .subtitle { color: #7f8c8d; margin-bottom: 30px; font-size: 0.95rem; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f0f2f5; color: #333; }
 
-        .card { background: #fff; border-radius: 10px; padding: 28px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 28px; }
-        .card h2 { font-size: 1.1rem; margin-bottom: 20px; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        .container { max-width: 960px; margin: 0 auto; padding: 32px 16px; }
+        h1 { font-size: 1.7rem; color: #1a2b4a; margin-bottom: 6px; }
+        .subtitle { color: #7f8c8d; margin-bottom: 28px; font-size: 0.92rem; }
 
-        .form-row { display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap; }
-        .form-group { display: flex; flex-direction: column; gap: 6px; }
-        .form-group label { font-size: 0.85rem; font-weight: 600; color: #555; }
-        input[type="file"] { border: 1px solid #ddd; border-radius: 6px; padding: 8px 12px; font-size: 0.9rem; background: #fafafa; cursor: pointer; }
-        select { border: 1px solid #ddd; border-radius: 6px; padding: 9px 14px; font-size: 0.9rem; background: #fafafa; cursor: pointer; }
-        button[type="submit"] {
-            background: #3498db; color: #fff; border: none; border-radius: 6px;
-            padding: 10px 24px; font-size: 0.95rem; cursor: pointer; font-weight: 600;
-            transition: background 0.2s;
-        }
-        button[type="submit"]:hover { background: #2980b9; }
+        .card { background: #fff; border-radius: 12px; padding: 24px; box-shadow: 0 2px 10px rgba(0,0,0,0.07); margin-bottom: 24px; }
+        .card h2 { font-size: 1rem; color: #1a2b4a; border-bottom: 2px solid #3b82f6; padding-bottom: 10px; margin-bottom: 20px; }
 
-        .alert { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; border-radius: 6px; padding: 12px 16px; margin-bottom: 20px; font-size: 0.9rem; }
+        /* 업로드 폼 */
+        .form-row { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+        .form-group { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 160px; }
+        .form-group label { font-size: 0.82rem; font-weight: 600; color: #555; }
+        input[type="file"] { border: 1px solid #d1d5db; border-radius: 7px; padding: 8px 10px; font-size: 0.88rem; background: #fafafa; cursor: pointer; width: 100%; }
+        select { border: 1px solid #d1d5db; border-radius: 7px; padding: 9px 12px; font-size: 0.88rem; background: #fafafa; cursor: pointer; width: 100%; }
+        .btn-submit { background: #3b82f6; color: #fff; border: none; border-radius: 7px; padding: 10px 22px; font-size: 0.92rem; cursor: pointer; font-weight: 600; white-space: nowrap; transition: background 0.2s; align-self: flex-end; }
+        .btn-submit:hover { background: #2563eb; }
 
-        .uploading { display: none; margin-top: 16px; color: #3498db; font-size: 0.9rem; font-weight: 600; }
+        .alert { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 7px; padding: 11px 14px; margin-bottom: 18px; font-size: 0.88rem; }
+
+        .uploading { display: none; margin-top: 14px; color: #3b82f6; font-size: 0.88rem; font-weight: 600; }
         .uploading.active { display: flex; align-items: center; gap: 10px; }
-        .spinner { width: 18px; height: 18px; border: 3px solid #ddd; border-top-color: #3498db; border-radius: 50%; animation: spin 0.8s linear infinite; }
+        .spinner { width: 16px; height: 16px; border: 3px solid #dbeafe; border-top-color: #3b82f6; border-radius: 50%; animation: spin 0.8s linear infinite; flex-shrink: 0; }
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-        thead tr { background: #f0f4f8; }
-        th { padding: 12px 14px; text-align: left; font-weight: 600; color: #555; }
-        td { padding: 12px 14px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
+        /* 테이블 */
+        .table-wrap { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.88rem; min-width: 520px; }
+        thead tr { background: #f1f5f9; }
+        th { padding: 11px 13px; text-align: left; font-weight: 600; color: #475569; font-size: 0.82rem; white-space: nowrap; }
+        td { padding: 11px 13px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
         tr:last-child td { border-bottom: none; }
-        tr:hover td { background: #fafcff; }
+        tr:hover td { background: #f8faff; }
 
-        .lang-badge { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; background: #eaf4fb; color: #2980b9; }
-        .summary-cell { max-width: 340px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #555; }
-        .btn-detail { background: #ecf0f1; color: #2c3e50; border: none; border-radius: 5px; padding: 5px 14px; font-size: 0.82rem; cursor: pointer; text-decoration: none; font-weight: 600; }
-        .btn-detail:hover { background: #d5dbdb; }
-        .empty { text-align: center; color: #aaa; padding: 40px 0; font-size: 0.95rem; }
+        .lang-badge { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; background: #dbeafe; color: #1d4ed8; }
+        .summary-cell { max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #64748b; }
+        .btn-view { display: inline-block; background: #f1f5f9; color: #1a2b4a; border: none; border-radius: 6px; padding: 5px 14px; font-size: 0.8rem; cursor: pointer; text-decoration: none; font-weight: 600; transition: background 0.15s; white-space: nowrap; }
+        .btn-view:hover { background: #e2e8f0; }
+        .empty { text-align: center; color: #aaa; padding: 40px 0; font-size: 0.92rem; }
+
+        /* 반응형 */
+        @media (max-width: 600px) {
+            h1 { font-size: 1.35rem; }
+            .card { padding: 18px; }
+            .form-row { flex-direction: column; }
+            .btn-submit { width: 100%; text-align: center; }
+            .summary-cell { max-width: 140px; }
+        }
     </style>
 </head>
 <body>
@@ -63,7 +72,7 @@
                     <label>PDF 파일</label>
                     <input type="file" name="file" accept=".pdf" required>
                 </div>
-                <div class="form-group">
+                <div class="form-group" style="max-width:160px;">
                     <label>원본 언어</label>
                     <select name="sourceLang">
                         <option value="EN">영어 (EN)</option>
@@ -71,7 +80,7 @@
                         <option value="ZH">중국어 (ZH)</option>
                     </select>
                 </div>
-                <button type="submit">번역 &amp; 요약 시작</button>
+                <button type="submit" class="btn-submit">번역 &amp; 요약</button>
             </div>
             <div class="uploading" id="uploadingMsg">
                 <div class="spinner"></div>
@@ -83,26 +92,28 @@
     <div class="card">
         <h2>처리된 문서 목록</h2>
         <div th:if="${#lists.isEmpty(documents)}" class="empty">아직 업로드된 문서가 없습니다.</div>
-        <table th:unless="${#lists.isEmpty(documents)}">
-            <thead>
-            <tr>
-                <th>#</th>
-                <th>파일명</th>
-                <th>언어</th>
-                <th>요약</th>
-                <th>상세</th>
-            </tr>
-            </thead>
-            <tbody>
-            <tr th:each="doc : ${documents}">
-                <td th:text="${doc.id}"></td>
-                <td th:text="${doc.fileName}"></td>
-                <td><span class="lang-badge" th:text="${doc.originLang}"></span></td>
-                <td class="summary-cell" th:text="${doc.summary}"></td>
-                <td><a class="btn-detail" th:href="@{/detail/{id}(id=${doc.id})}">보기</a></td>
-            </tr>
-            </tbody>
-        </table>
+        <div class="table-wrap" th:unless="${#lists.isEmpty(documents)}">
+            <table>
+                <thead>
+                <tr>
+                    <th>#</th>
+                    <th>파일명</th>
+                    <th>언어</th>
+                    <th>요약</th>
+                    <th></th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="doc : ${documents}">
+                    <td th:text="${doc.id}" style="color:#94a3b8;width:40px;"></td>
+                    <td th:text="${doc.fileName}" style="font-weight:600;"></td>
+                    <td><span class="lang-badge" th:text="${doc.originLang}"></span></td>
+                    <td class="summary-cell" th:text="${doc.summary}"></td>
+                    <td><a class="btn-view" th:href="@{/detail/{id}(id=${doc.id})}">보기</a></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 

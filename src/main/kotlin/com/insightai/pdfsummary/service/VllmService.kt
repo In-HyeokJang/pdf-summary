@@ -1,43 +1,58 @@
 package com.insightai.pdfsummary.service
 
+import com.insightai.pdfsummary.config.VllmProperties
+import com.insightai.pdfsummary.config.WebClientConfig
 import com.insightai.pdfsummary.dto.VllmRequest
 import com.insightai.pdfsummary.dto.VllmResponse
-import org.springframework.beans.factory.annotation.Value
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.client.WebClient
 import reactor.core.publisher.Mono
+import java.util.concurrent.ConcurrentHashMap
 
 @Service
 class VllmService(
-    private val vllmWebClient: WebClient,
-    @Value("\${vllm.model}") private val model: String
+    private val properties: VllmProperties,
+    private val webClientConfig: WebClientConfig
 ) {
+    private val log = LoggerFactory.getLogger(VllmService::class.java)
+    private val webClients = ConcurrentHashMap<String, WebClient>()
+
+    private fun webClientFor(baseUrl: String): WebClient =
+        webClients.getOrPut(baseUrl) { webClientConfig.buildWebClient(baseUrl) }
 
     fun translateAsync(chunk: String, sourceLang: String): Mono<String> {
-        return callAsync(
-            messages = listOf(
-                VllmRequest.Message(
-                    role = "system",
-                    content = """You are a professional academic translator. Translate ALL text into Korean.
+        val (baseUrl, model) = properties.resolve(sourceLang)
+        log.debug("번역 모델: {} ({})", model, sourceLang)
+        return callTranslate(webClientFor(baseUrl), model, chunk, sourceLang, retry = false)
+            .flatMap { result ->
+                if (result.count { it.code in 0x4E00..0x9FFF } > 15) {
+                    log.warn("CJK 감지 → 재시도 (lang={})", sourceLang)
+                    callTranslate(webClientFor(baseUrl), model, chunk, sourceLang, retry = true)
+                } else {
+                    Mono.just(result)
+                }
+            }
+    }
 
-Rules:
-- Translate body text, titles, and section headings into natural Korean.
-- Author names: transliterate every author name phonetically into Korean based on its language of origin. Apply this consistently throughout the entire text, including inside parenthetical in-text citations like (Smith & Jones, 2020).
-- Publisher names: transliterate phonetically, do NOT translate their meaning (e.g. a publisher named after a word should still be transliterated, not translated).
-- Journal/book titles: translate the meaning into natural Korean.
-- Never leave any word in the original language. Never output '?' as a placeholder.
-- Output only the Korean translation, nothing else."""
-                ),
-                VllmRequest.Message(
-                    role = "user",
-                    content = "Translate the following $sourceLang text into Korean:\n\n$chunk"
-                )
-            ),
-            maxTokens = 1500
-        )
+    private fun callTranslate(
+        webClient: WebClient, model: String, chunk: String, sourceLang: String, retry: Boolean
+    ): Mono<String> {
+        val (system, user) = if (!retry) {
+            "You are a translator. Translate the given text into Korean. Output only the Korean translation. Do not include any Chinese characters, Japanese characters, or meta-comments. If you detect a table (rows with aligned columns), format it as a markdown table with Korean headers. Figure/Table captions like \"Figure 1.\", \"Table 2.\" → translate to \"그림 1.\", \"표 2.\". Do not translate model names, dataset names, or metric names (e.g. BLEU, COMET, Llama)." to
+            "Translate this $sourceLang text into Korean:\n\n$chunk"
+        } else {
+            "번역가입니다. 주어진 텍스트를 한국어로 번역하세요. 한국어 번역문만 출력하세요." to
+            "다음을 한국어로 번역:\n\n$chunk"
+        }
+        return callAsync(webClient, model, listOf(
+            VllmRequest.Message(role = "system", content = system),
+            VllmRequest.Message(role = "user", content = user)
+        ), maxTokens = 2500)
     }
 
     fun summarizeAsync(text: String): Mono<String> {
+        val (baseUrl, model) = properties.resolve("DEFAULT")
         val system = """
 You are an expert document analyst. Your task is to:
 1. Identify the document type from the content.
@@ -55,7 +70,8 @@ Rules:
 - Use markdown ### headers appropriate for the document type.
 - Write 3-5 specific sentences per section — be detailed and informative.
 - Always extract and include: key theoretical terms/concepts, specific numbers/statistics, named methods or models, experimental conditions, and concrete findings.
-- For academic papers: explicitly name core theoretical frameworks and concepts introduced (e.g., a specific rule, model, or effect). Include exact statistics from results.
+- For academic papers: explicitly name core theoretical frameworks and concepts introduced. Include exact statistics from results.
+- All output must be in Korean Hangul (한글) only. No Chinese characters, no Japanese kanji.
 - All output must be in professional, natural Korean.
         """.trimIndent()
 
@@ -67,27 +83,22 @@ $text
 </document>
         """.trimIndent()
 
-        return callAsync(
-            messages = listOf(
-                VllmRequest.Message(role = "system", content = system),
-                VllmRequest.Message(role = "user", content = user)
-            ),
-            maxTokens = 1024
-        )
+        return callAsync(webClientFor(baseUrl), model, listOf(
+            VllmRequest.Message(role = "system", content = system),
+            VllmRequest.Message(role = "user", content = user)
+        ), maxTokens = 1200)
     }
 
     fun summarize(text: String): String = summarizeAsync(text).block() ?: ""
 
     private fun callAsync(
+        webClient: WebClient,
+        model: String,
         messages: List<VllmRequest.Message>,
         maxTokens: Int = 1024
     ): Mono<String> {
-        val request = VllmRequest(
-            model = model,
-            messages = messages,
-            max_tokens = maxTokens
-        )
-        return vllmWebClient.post()
+        val request = VllmRequest(model = model, messages = messages, max_tokens = maxTokens)
+        return webClient.post()
             .uri("/v1/chat/completions")
             .bodyValue(request)
             .retrieve()
@@ -99,15 +110,10 @@ $text
         text.filter { ch ->
             when {
                 ch == '\n' || ch == '\r' || ch == '\t' -> true
-                ch.code < 0x20 -> false                                      // control chars
-                ch == '�' -> false                                      // replacement char
+                ch.code < 0x20 -> false
                 ch.category == CharCategory.PRIVATE_USE -> false
                 ch.category == CharCategory.SURROGATE -> false
                 ch.category == CharCategory.FORMAT -> false
-                ch.code in 0x4E00..0x9FFF -> false                          // CJK Unified Ideographs
-                ch.code in 0x3400..0x4DBF -> false                          // CJK Extension A
-                ch.code in 0x20000..0x2A6DF -> false                        // CJK Extension B
-                ch.code in 0xF900..0xFAFF -> false                          // CJK Compatibility Ideographs
                 else -> true
             }
         }
