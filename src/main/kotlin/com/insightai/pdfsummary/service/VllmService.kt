@@ -83,6 +83,7 @@ $text
 </document>
         """.trimIndent()
 
+        log.info("[TIMING] 요약 요청 → 모델: {} ({}자)", model, text.length)
         return callAsync(webClientFor(baseUrl), model, listOf(
             VllmRequest.Message(role = "system", content = system),
             VllmRequest.Message(role = "user", content = user)

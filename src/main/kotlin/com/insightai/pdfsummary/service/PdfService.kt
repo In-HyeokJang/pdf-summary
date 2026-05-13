@@ -48,7 +48,14 @@ class PdfService(
         log.info("[TIMING] 번역 완료: ${(System.currentTimeMillis() - t0) / 1000}초 (${chunks.size}개 청크)")
 
         val t1 = System.currentTimeMillis()
-        val summaryInput = translatedText.take(6000)
+        val summaryInput = if (translatedText.length <= 6000) {
+            translatedText
+        } else {
+            val head = translatedText.take(2500)
+            val mid = translatedText.substring(translatedText.length / 2 - 500, translatedText.length / 2 + 500)
+            val tail = translatedText.takeLast(2000)
+            "$head\n\n[...중략...]\n\n$mid\n\n[...중략...]\n\n$tail"
+        }
         log.info("[TIMING] 요약 입력: ${summaryInput.length}자 (번역본 전체의 ${String.format("%.0f", summaryInput.length * 100.0 / translatedText.length.coerceAtLeast(1))}%)")
         val summary = vllmService.summarize(summaryInput)
         log.info("[TIMING] 요약 완료: ${(System.currentTimeMillis() - t1) / 1000}초")
