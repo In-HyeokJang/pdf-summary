@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="570" viewBox="0 0 1200 570">
+  <defs>
+    <marker id="arr" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#64748b"/>
+    </marker>
+    <filter id="sh" x="-5%" y="-5%" width="115%" height="130%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#00000022"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="570" fill="#f1f5f9"/>
+
+  <!-- ===== HEADER ===== -->
+  <rect x="0" y="0" width="1200" height="88" fill="#1e3a5f"/>
+  <text x="600" y="38" fill="white" font-size="24" font-weight="bold" text-anchor="middle" font-family="'Malgun Gothic','Apple SD Gothic Neo',sans-serif">PDF 번역·요약 시스템 워크플로우</text>
+  <text x="600" y="66" fill="#90b4d4" font-size="13" text-anchor="middle" font-family="'Malgun Gothic','Apple SD Gothic Neo',sans-serif">다국어 PDF (EN / ZH / JA) → 한국어 번역 + Map-Reduce 요약  ·  Spring Boot 3.3 + vLLM + PostgreSQL</text>
+
+  <!-- ===== FEATURE CHIPS ===== -->
+  <rect x="73"  y="100" width="175" height="30" rx="15" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="160" y="120" fill="#1e40af" font-size="12" font-weight="bold" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">SHA-256 중복 방지</text>
+
+  <rect x="261" y="100" width="175" height="30" rx="15" fill="#dcfce7" stroke="#16a34a" stroke-width="1.5"/>
+  <text x="348" y="120" fill="#14532d" font-size="12" font-weight="bold" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">비관적 락 (FOR UPDATE)</text>
+
+  <rect x="449" y="100" width="195" height="30" rx="15" fill="#fef3c7" stroke="#d97706" stroke-width="1.5"/>
+  <text x="546" y="120" fill="#92400e" font-size="12" font-weight="bold" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">Stale 30분 초과 → FAILED</text>
+
+  <rect x="657" y="100" width="150" height="30" rx="15" fill="#f3e8ff" stroke="#9333ea" stroke-width="1.5"/>
+  <text x="732" y="120" fill="#6b21a8" font-size="12" font-weight="bold" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">UI 원클릭 재시도</text>
+
+  <rect x="820" y="100" width="160" height="30" rx="15" fill="#fef9c3" stroke="#ca8a04" stroke-width="1.5"/>
+  <text x="900" y="120" fill="#713f12" font-size="12" font-weight="bold" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">@Async 비동기 처리</text>
+
+  <rect x="993" y="100" width="155" height="30" rx="15" fill="#f5f3ff" stroke="#7c3aed" stroke-width="1.5"/>
+  <text x="1070" y="120" fill="#4c1d95" font-size="12" font-weight="bold" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">Map-Reduce 요약</text>
+
+  <!-- ===== ASYNC BACKGROUND (steps 4-8) ===== -->
+  <rect x="463" y="147" width="648" height="192" rx="8" fill="#fffbf5" stroke="#fcd9a7" stroke-width="1.5" stroke-dasharray="6,4"/>
+  <text x="787" y="162" fill="#b45309" font-size="11" font-weight="bold" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">백그라운드 처리 — pdfTaskExecutor (core=2, max=4)</text>
+
+  <!-- ===== MAIN STEPS  (y=153, h=90, center-y=198) ===== -->
+
+  <!-- STEP 1 -->
+  <rect x="73" y="153" width="110" height="90" rx="8" fill="#3b82f6" filter="url(#sh)"/>
+  <circle cx="90" cy="170" r="12" fill="white"/>
+  <text x="90" y="175" fill="#3b82f6" font-size="13" font-weight="bold" text-anchor="middle" font-family="sans-serif">1</text>
+  <text x="128" y="196" fill="white" font-size="13" font-weight="bold" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">웹 UI</text>
+  <text x="128" y="212" fill="#bfdbfe" font-size="10" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">PDF 업로드</text>
+  <text x="128" y="227" fill="#93c5fd" font-size="10" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">Thymeleaf</text>
+  <line x1="183" y1="198" x2="202" y2="198" stroke="#64748b" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- STEP 2 -->
+  <rect x="205" y="153" width="110" height="90" rx="8" fill="#1d4ed8" filter="url(#sh)"/>
+  <circle cx="222" cy="170" r="12" fill="white"/>
+  <text x="222" y="175" fill="#1d4ed8" font-size="13" font-weight="bold" text-anchor="middle" font-family="sans-serif">2</text>
+  <text x="260" y="191" fill="white" font-size="12" font-weight="bold" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">중복 체크</text>
+  <text x="260" y="207" fill="#bfdbfe" font-size="10" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">SHA-256 Hash</text>
+  <text x="260" y="221" fill="#bfdbfe" font-size="10" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">비관적 락</text>
+  <text x="260" y="235" fill="#93c5fd" font-size="9" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">→ CACHED 반환</text>
+  <line x1="315" y1="198" x2="334" y2="198" stroke="#64748b" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- STEP 3 -->
+  <rect x="337" y="153" width="110" height="90" rx="8" fill="#059669" filter="url(#sh)"/>
+  <circle cx="354" cy="170" r="12" fill="white"/>
+  <text x="354" y="175" fill="#059669" font-size="13" font-weight="bold" text-anchor="middle" font-family="sans-serif">3</text>
+  <text x="392" y="193" fill="white" font-size="12" font-weight="bold" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">텍스트 추출</text>
+  <text x="392" y="209" fill="#a7f3d0" font-size="10" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">Apache PDFBox</text>
+  <text x="392" y="223" fill="#a7f3d0" font-size="10" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">3.0.2</text>
+
+  <!-- HTTP 즉시 반환 표시 -->
+  <line x1="447" y1="198" x2="466" y2="198" stroke="#64748b" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="458" y1="152" x2="458" y2="173" stroke="#ca8a04" stroke-width="1.5" stroke-dasharray="3,3"/>
+  <polygon points="454,152 462,152 458,146" fill="#ca8a04"/>
+  <text x="417" y="144" fill="#92400e" font-size="10" font-weight="bold" font-family="'Malgun Gothic',sans-serif">HTTP 즉시 반환</text>
+
+  <!-- STEP 4 -->
+  <rect x="469" y="153" width="110" height="90" rx="8" fill="#0d9488" filter="url(#sh)"/>
+  <circle cx="486" cy="170" r="12" fill="white"/>
+  <text x="486" y="175" fill="#0d9488" font-size="13" font-weight="bold" text-anchor="middle" font-family="sans-serif">4</text>
+  <text x="524" y="191" fill="white" font-size="12" font-weight="bold" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">청크 분할</text>
+  <text x="524" y="207" fill="#99f6e4" font-size="10" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">최대 2500자</text>
+  <text x="524" y="221" fill="#99f6e4" font-size="10" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">300자 오버랩</text>
+  <text x="524" y="235" fill="#99f6e4" font-size="9" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">문단 경계 기준</text>
+  <line x1="579" y1="198" x2="598" y2="198" stroke="#64748b" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- STEP 5 -->
+  <rect x="601" y="153" width="110" height="90" rx="8" fill="#d97706" filter="url(#sh)"/>
+  <circle cx="618" cy="170" r="12" fill="white"/>
+  <text x="618" y="175" fill="#d97706" font-size="13" font-weight="bold" text-anchor="middle" font-family="sans-serif">5</text>
+  <text x="656" y="191" fill="white" font-size="12" font-weight="bold" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">병렬 번역</text>
+  <text x="656" y="207" fill="#fde68a" font-size="10" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">concurrency=10</text>
+  <text x="656" y="221" fill="#fde68a" font-size="10" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">언어별 라우팅</text>
+  <text x="656" y="235" fill="#fde68a" font-size="9" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">EN / ZH / JA</text>
+  <line x1="711" y1="198" x2="730" y2="198" stroke="#64748b" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- STEP 6 -->
+  <rect x="733" y="153" width="110" height="90" rx="8" fill="#7c3aed" filter="url(#sh)"/>
+  <circle cx="750" cy="170" r="12" fill="white"/>
+  <text x="750" y="175" fill="#7c3aed" font-size="13" font-weight="bold" text-anchor="middle" font-family="sans-serif">6</text>
+  <text x="788" y="189" fill="white" font-size="12" font-weight="bold" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">Map-Reduce</text>
+  <text x="788" y="204" fill="white" font-size="12" font-weight="bold" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">요약</text>
+  <text x="788" y="220" fill="#ddd6fe" font-size="10" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">3000자 청크→소요약</text>
+  <text x="788" y="234" fill="#ddd6fe" font-size="9" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">→ 최종 통합 요약</text>
+  <line x1="843" y1="198" x2="862" y2="198" stroke="#64748b" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- STEP 7 -->
+  <rect x="865" y="153" width="110" height="90" rx="8" fill="#0f766e" filter="url(#sh)"/>
+  <circle cx="882" cy="170" r="12" fill="white"/>
+  <text x="882" y="175" fill="#0f766e" font-size="13" font-weight="bold" text-anchor="middle" font-family="sans-serif">7</text>
+  <text x="920" y="193" fill="white" font-size="12" font-weight="bold" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">DB 저장</text>
+  <text x="920" y="209" fill="#99f6e4" font-size="10" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">PostgreSQL</text>
+  <text x="920" y="223" fill="#99f6e4" font-size="10" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">원문·번역·요약</text>
+  <text x="920" y="237" fill="#99f6e4" font-size="9" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">status·처리시간</text>
+  <line x1="975" y1="198" x2="994" y2="198" stroke="#64748b" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- STEP 8 -->
+  <rect x="997" y="153" width="110" height="90" rx="8" fill="#475569" filter="url(#sh)"/>
+  <circle cx="1014" cy="170" r="12" fill="white"/>
+  <text x="1014" y="175" fill="#475569" font-size="13" font-weight="bold" text-anchor="middle" font-family="sans-serif">8</text>
+  <text x="1052" y="192" fill="white" font-size="12" font-weight="bold" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">상태 관리</text>
+  <text x="1052" y="208" fill="#cbd5e1" font-size="10" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">DONE / FAILED</text>
+  <text x="1052" y="222" fill="#cbd5e1" font-size="10" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">CACHED / PENDING</text>
+  <text x="1052" y="236" fill="#94a3b8" font-size="9" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">@Scheduled 자동복구</text>
+
+  <!-- ===== DETAIL BOXES ===== -->
+  <line x1="656" y1="243" x2="656" y2="258" stroke="#d97706" stroke-width="1.5"/>
+  <rect x="594" y="258" width="124" height="68" rx="6" fill="#fff7ed" stroke="#d97706" stroke-width="1.5" filter="url(#sh)"/>
+  <text x="656" y="275" fill="#92400e" font-size="11" font-weight="bold" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">언어별 모델 라우팅</text>
+  <text x="656" y="291" fill="#9a3412" font-size="10" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">EN → EXAONE 3.5 32B AWQ</text>
+  <text x="656" y="305" fill="#9a3412" font-size="10" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">ZH·JA → Qwen 2.5 14B</text>
+  <text x="656" y="319" fill="#b45309" font-size="9" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">flatMapSequential · concurrency=10</text>
+
+  <line x1="788" y1="243" x2="788" y2="258" stroke="#7c3aed" stroke-width="1.5"/>
+  <rect x="722" y="258" width="132" height="68" rx="6" fill="#f5f3ff" stroke="#7c3aed" stroke-width="1.5" filter="url(#sh)"/>
+  <text x="788" y="275" fill="#4c1d95" font-size="11" font-weight="bold" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">Map-Reduce 구조</text>
+  <text x="788" y="291" fill="#4c1d95" font-size="10" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">Map: 소요약 concurrency=4</text>
+  <text x="788" y="305" fill="#4c1d95" font-size="10" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">Reduce: 최종요약 Qwen 14B</text>
+  <text x="788" y="319" fill="#6d28d9" font-size="9" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">합산 입력 최대 4000자</text>
+
+  <!-- ===== INFRASTRUCTURE ===== -->
+  <rect x="30" y="352" width="1145" height="155" rx="10" fill="white" stroke="#e2e8f0" stroke-width="1.5" filter="url(#sh)"/>
+  <text x="603" y="374" fill="#374151" font-size="13" font-weight="bold" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">인프라 구성</text>
+
+  <rect x="55"  y="386" width="235" height="106" rx="8" fill="#fff7ed" stroke="#d97706" stroke-width="2"/>
+  <text x="172" y="408" fill="#92400e" font-size="13" font-weight="bold" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">vLLM EXAONE 3.5 32B AWQ</text>
+  <text x="172" y="427" fill="#b45309" font-size="11" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">DGX Spark GB10</text>
+  <text x="172" y="445" fill="#b45309" font-size="11" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">EN 번역 전용</text>
+  <text x="172" y="463" fill="#d97706" font-size="10" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">메모리 125GB · WebClient 60s+</text>
+  <text x="172" y="479" fill="#d97706" font-size="10" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">OpenAI 호환 API</text>
+
+  <rect x="484" y="386" width="237" height="106" rx="8" fill="#fffbeb" stroke="#f59e0b" stroke-width="2"/>
+  <text x="602" y="408" fill="#78350f" font-size="13" font-weight="bold" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">vLLM Qwen 2.5 14B</text>
+  <text x="602" y="427" fill="#b45309" font-size="11" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">DGX Spark GB10</text>
+  <text x="602" y="445" fill="#b45309" font-size="11" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">ZH / JA 번역 · 소요약 · 최종요약</text>
+  <text x="602" y="463" fill="#d97706" font-size="10" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">OpenAI 호환 API</text>
+  <text x="602" y="479" fill="#d97706" font-size="10" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">summary-concurrency=4</text>
+
+  <rect x="915" y="386" width="235" height="106" rx="8" fill="#f0fdf4" stroke="#16a34a" stroke-width="2"/>
+  <text x="1032" y="408" fill="#14532d" font-size="13" font-weight="bold" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">PostgreSQL</text>
+  <text x="1032" y="427" fill="#166534" font-size="11" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">로컬 Docker</text>
+  <text x="1032" y="445" fill="#166534" font-size="11" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">원문 · 번역 · 요약 · status</text>
+  <text x="1032" y="463" fill="#166534" font-size="11" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">processingTimeSec · startedAt</text>
+  <text x="1032" y="479" fill="#15803d" font-size="10" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">Spring Data JPA</text>
+
+  <!-- ===== BOTTOM BAR ===== -->
+  <rect x="0" y="522" width="1200" height="48" fill="#0f172a"/>
+  <text x="600" y="551" fill="#64748b" font-size="12" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">Spring Boot 3.3 · Kotlin · Spring Data JPA · WebClient (Project Reactor) · Thymeleaf · Apache PDFBox 3.0.2 · Gradle Kotlin DSL</text>
+</svg>
