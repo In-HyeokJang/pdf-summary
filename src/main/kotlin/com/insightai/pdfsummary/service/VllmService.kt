@@ -36,13 +36,33 @@ class VllmService(
     }
 
     private fun callTranslate(
-        webClient: WebClient, model: String, chunk: String, sourceLang: String, retry: Boolean
+        webClient: WebClient, model: String, chunk: String,
+        sourceLang: String, retry: Boolean
     ): Mono<String> {
         val (system, user) = if (!retry) {
-            "You are a translator. Translate the given text into Korean. Output only the Korean translation. Do not include any Chinese characters, Japanese characters, or meta-comments. If you detect a table (rows with aligned columns), format it as a markdown table with Korean headers. Figure/Table captions like \"Figure 1.\", \"Table 2.\" → translate to \"그림 1.\", \"표 2.\". Do not translate model names, dataset names, or metric names (e.g. BLEU, COMET, Llama)." to
-            "Translate this $sourceLang text into Korean:\n\n$chunk"
+            ("""
+You are a professional Korean translator specializing in academic papers, patents, contracts, and technical documents.
+
+Translation rules:
+- Output ONLY the Korean translation. No meta-comments, no explanations.
+- Tone: formal declarative style (한국어 ~다/~이다 체). Never mix 존댓말 and 반말.
+- Technical terms: on first appearance include English in parentheses — e.g., 강화학습(Reinforcement Learning). Subsequent occurrences: Korean only.
+- Do NOT translate: mathematical expressions, units, model names, dataset names, metric names (e.g. BLEU, COMET, F1, Llama, MNIST).
+- Tables: preserve as markdown table with Korean headers.
+- Figure/Table captions: "Figure 1." → "그림 1.", "Table 2." → "표 2."
+- If the chunk begins or ends mid-sentence, translate naturally — do not add or remove content to fill the gap.
+- No Chinese characters (漢字) or Japanese kana in output.""".trimIndent()) to
+            "Translate the following $sourceLang text into Korean:\n\n$chunk"
         } else {
-            "번역가입니다. 주어진 텍스트를 한국어로 번역하세요. 한국어 번역문만 출력하세요." to
+            ("""
+전문 한국어 번역가입니다. 학술 논문·특허·계약서·기술문서를 전문으로 합니다.
+
+번역 규칙:
+- 한국어 번역문만 출력하세요. 설명이나 메타 코멘트 금지.
+- 문체: ~다/~이다 체 통일. 존댓말·반말 혼용 금지.
+- 전문용어 첫 등장 시 영문 병기: 예) 강화학습(Reinforcement Learning).
+- 수식·단위·모델명·데이터셋명·지표명은 원문 유지.
+- 한자(漢字)·일본어 가나 출력 금지.""".trimIndent()) to
             "다음을 한국어로 번역:\n\n$chunk"
         }
         return callAsync(webClient, model, listOf(
@@ -51,32 +71,83 @@ class VllmService(
         ), maxTokens = 2500)
     }
 
+    fun chunkSummarizeAsync(chunk: String): Mono<String> {
+        val (baseUrl, model) = properties.resolve("DEFAULT")
+        val system = """
+다음 텍스트의 핵심 내용을 한국어로 요약하세요.
+
+출력 형식 (3문장 고정):
+1문장: 이 단락의 핵심 주장 1개 (수치·고유명사·모델명 포함)
+2문장: 핵심 주장을 뒷받침하는 근거 또는 방법
+3문장: 추가 근거 또는 결과 수치
+
+규칙:
+- 수치·통계·고유명사·모델명·데이터셋명은 반드시 포함하세요.
+- 불필요한 접속어·부연 설명 제거.
+- 한국어 ~다/~이다 체 통일. 한자·가나 출력 금지.
+- 3문장을 초과하지 마세요.
+        """.trimIndent()
+        return callAsync(webClientFor(baseUrl), model, listOf(
+            VllmRequest.Message(role = "system", content = system),
+            VllmRequest.Message(role = "user", content = chunk)
+        ), maxTokens = 500)
+    }
+
     fun summarizeAsync(text: String): Mono<String> {
         val (baseUrl, model) = properties.resolve("DEFAULT")
         val system = """
-You are an expert document analyst. Your task is to:
-1. Identify the document type from the content.
-2. Produce a structured summary in Korean using the most appropriate format for that document type.
+당신은 전문 문서 분석가입니다. 주어진 문서의 유형을 판별하고 해당 유형에 최적화된 한국어 구조화 요약을 작성하세요.
 
-Document type guidelines:
-- Academic paper → use these sections: 연구 목적 / 핵심 도전 과제 / 핵심 이론 및 개념 / 제안 방법 / 실험 및 데이터 / 주요 결과 / 결론 및 시사점
-- Business report / market analysis → 개요 / 핵심 현황 / 주요 발견 / 시사점 및 제언
-- Legal / contract document → 문서 목적 / 주요 조항 / 당사자 의무 / 기한 및 조건 / 유의사항
-- Technical manual / guide → 목적 및 대상 / 주요 기능 / 핵심 절차 / 주의사항
-- Other → use the most suitable structure for the content
+[문서 유형별 섹션 구조]
 
-Rules:
-- First line must be: **문서 유형: [detected type in Korean]**
-- Use markdown ### headers appropriate for the document type.
-- Write 3-5 specific sentences per section — be detailed and informative.
-- Always extract and include: key theoretical terms/concepts, specific numbers/statistics, named methods or models, experimental conditions, and concrete findings.
-- For academic papers: explicitly name core theoretical frameworks and concepts introduced. Include exact statistics from results.
-- All output must be in Korean Hangul (한글) only. No Chinese characters, no Japanese kanji.
-- All output must be in professional, natural Korean.
+학술 논문(Academic Paper):
+### 연구 목적
+### 핵심 도전 과제
+### 핵심 이론 및 개념
+### 제안 방법
+### 실험 및 데이터
+### 주요 결과
+### 결론 및 시사점
+→ 주요 결과 섹션에 수치(정확도·F1·BLEU 등) 최소 3개 이상 명시할 것.
+
+특허(Patent):
+### 발명의 목적
+### 핵심 청구항
+### 기술적 특징 및 구성
+### 적용 분야 및 효과
+
+계약서(Contract):
+### 계약 목적 및 당사자
+### 핵심 조항
+### 당사자 의무사항
+### 기한 및 조건
+### 유의사항
+
+기술문서(Technical Document):
+### 목적 및 대상
+### 주요 기능
+### 핵심 절차
+### 주의사항
+
+보고서/분석서(Report):
+### 개요
+### 핵심 현황
+### 주요 발견
+### 시사점 및 제언
+
+기타: 내용에 가장 적합한 구조 사용.
+
+[공통 규칙]
+- 첫 줄 반드시: **문서 유형: [판별된 유형]**
+- 섹션 헤더는 ### 사용. bullet point보다 ### 구조 우선.
+- 각 섹션 3~5문장. 구체적 수치·고유명사·모델명 포함.
+- 전문용어 첫 등장 시 영문 병기: 예) 자연어처리(Natural Language Processing).
+- 문체: ~다/~이다 체 통일. 한자·가나 출력 금지.
+- 불필요한 서론·결어 없이 바로 **문서 유형:** 으로 시작.
         """.trimIndent()
 
         val user = """
-Analyze the following document, detect its type, and produce a detailed structured summary in Korean following the guidelines.
+다음 문서를 분석하여 유형을 판별하고, 해당 유형의 구조에 맞춰 상세한 한국어 요약을 작성하세요.
 
 <document>
 $text
@@ -87,7 +158,7 @@ $text
         return callAsync(webClientFor(baseUrl), model, listOf(
             VllmRequest.Message(role = "system", content = system),
             VllmRequest.Message(role = "user", content = user)
-        ), maxTokens = 1200)
+        ), maxTokens = 1500)
     }
 
     fun summarize(text: String): String = summarizeAsync(text).block() ?: ""

@@ -6,7 +6,11 @@ import org.springframework.boot.context.properties.ConfigurationProperties
 data class VllmProperties(
     val defaultBaseUrl: String,
     val defaultModel: String,
-    val languageModels: Map<String, LanguageModel> = emptyMap()
+    val languageModels: Map<String, LanguageModel> = emptyMap(),
+    val translationConcurrency: Int = 10,
+    val summaryChunkSize: Int = 5000,
+    val summaryConcurrency: Int = 4,
+    val staleTimeoutMinutes: Int = 30
 ) {
     data class LanguageModel(val baseUrl: String, val model: String)
 

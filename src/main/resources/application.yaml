@@ -18,7 +18,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update
     show-sql: true
     properties:
       hibernate:
@@ -38,3 +38,7 @@ vllm:
   default-base-url: ${VLLM_BASE_URL:http://localhost:8000}
   default-model: ${VLLM_MODEL:Qwen/Qwen2.5-14B-Instruct}
   language-models: {}
+  translation-concurrency: 10
+  summary-chunk-size: 5000
+  summary-concurrency: 4
+  stale-timeout-minutes: 30

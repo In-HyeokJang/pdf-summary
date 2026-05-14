@@ -1,6 +1,7 @@
 package com.insightai.pdfsummary.dto
 
 import com.insightai.pdfsummary.domain.PdfDocument
+import com.insightai.pdfsummary.domain.ProcessingStatus
 import java.time.LocalDateTime
 
 data class PdfSummaryResponse(
@@ -9,7 +10,10 @@ data class PdfSummaryResponse(
     val originLang: String?,
     val summary: String?,
     val translatedText: String?,
-    val createdAt: LocalDateTime
+    val createdAt: LocalDateTime,
+    val completedAt: LocalDateTime?,
+    val processingTimeSec: Long?,
+    val status: ProcessingStatus
 ) {
     companion object {
         fun from(doc: PdfDocument) = PdfSummaryResponse(
@@ -18,7 +22,10 @@ data class PdfSummaryResponse(
             originLang = doc.originLang,
             summary = doc.summary,
             translatedText = doc.translatedText,
-            createdAt = doc.createdAt
+            createdAt = doc.createdAt,
+            completedAt = doc.completedAt,
+            processingTimeSec = doc.processingTimeSec,
+            status = doc.status
         )
     }
 }

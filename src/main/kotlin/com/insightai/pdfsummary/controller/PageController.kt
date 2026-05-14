@@ -1,5 +1,6 @@
 package com.insightai.pdfsummary.controller
 
+import com.insightai.pdfsummary.domain.ProcessingStatus
 import com.insightai.pdfsummary.service.PdfExportService
 import com.insightai.pdfsummary.service.PdfService
 import jakarta.servlet.http.HttpServletResponse
@@ -20,7 +21,9 @@ class PageController(
 
     @GetMapping("/")
     fun index(model: Model): String {
-        model.addAttribute("documents", pdfService.list())
+        val documents = pdfService.list()
+        model.addAttribute("documents", documents)
+        model.addAttribute("hasProcessing", documents.any { it.status == ProcessingStatus.PROCESSING })
         return "index"
     }
 
@@ -31,7 +34,7 @@ class PageController(
         redirectAttributes: RedirectAttributes
     ): String {
         val result = pdfService.upload(file, sourceLang)
-        redirectAttributes.addFlashAttribute("message", "업로드 완료: ${result.fileName}")
+        redirectAttributes.addFlashAttribute("message", "접수 완료: ${result.fileName} — 백그라운드에서 번역 처리 중입니다.")
         return "redirect:/"
     }
 
@@ -39,6 +42,13 @@ class PageController(
     fun detail(@PathVariable id: Long, model: Model): String {
         model.addAttribute("doc", pdfService.get(id))
         return "detail"
+    }
+
+    @PostMapping("/retry/{id}")
+    fun retry(@PathVariable id: Long, redirectAttributes: RedirectAttributes): String {
+        pdfService.retry(id)
+        redirectAttributes.addFlashAttribute("message", "재처리가 시작됐습니다.")
+        return "redirect:/detail/$id"
     }
 
     @GetMapping("/download/{id}")

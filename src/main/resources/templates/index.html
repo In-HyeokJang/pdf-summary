@@ -33,17 +33,31 @@
 
         /* 테이블 */
         .table-wrap { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-        table { width: 100%; border-collapse: collapse; font-size: 0.88rem; min-width: 520px; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.88rem; min-width: 580px; }
         thead tr { background: #f1f5f9; }
         th { padding: 11px 13px; text-align: left; font-weight: 600; color: #475569; font-size: 0.82rem; white-space: nowrap; }
         td { padding: 11px 13px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
         tr:last-child td { border-bottom: none; }
         tr:hover td { background: #f8faff; }
+        tr.row-failed td { background: #fff5f5; }
+        tr.row-failed:hover td { background: #fee2e2; }
 
         .lang-badge { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; background: #dbeafe; color: #1d4ed8; }
-        .summary-cell { max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #64748b; }
+        .summary-cell { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #64748b; }
+
+        /* 상태 배지 */
+        .badge { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; }
+        .badge-done       { background: #d1fae5; color: #065f46; }
+        .badge-failed     { background: #fee2e2; color: #991b1b; }
+        .badge-processing { background: #dbeafe; color: #1d4ed8; }
+        .badge-cached     { background: #f1f5f9; color: #64748b; }
+        .badge-pending    { background: #fef3c7; color: #92400e; }
+
         .btn-view { display: inline-block; background: #f1f5f9; color: #1a2b4a; border: none; border-radius: 6px; padding: 5px 14px; font-size: 0.8rem; cursor: pointer; text-decoration: none; font-weight: 600; transition: background 0.15s; white-space: nowrap; }
         .btn-view:hover { background: #e2e8f0; }
+        .btn-retry { display: inline-block; background: #fee2e2; color: #991b1b; border: none; border-radius: 6px; padding: 5px 12px; font-size: 0.8rem; cursor: pointer; font-weight: 600; transition: background 0.15s; white-space: nowrap; margin-left: 6px; }
+        .btn-retry:hover { background: #fecaca; }
+
         .empty { text-align: center; color: #aaa; padding: 40px 0; font-size: 0.92rem; }
 
         /* 반응형 */
@@ -52,7 +66,7 @@
             .card { padding: 18px; }
             .form-row { flex-direction: column; }
             .btn-submit { width: 100%; text-align: center; }
-            .summary-cell { max-width: 140px; }
+            .summary-cell { max-width: 120px; }
         }
     </style>
 </head>
@@ -84,7 +98,7 @@
             </div>
             <div class="uploading" id="uploadingMsg">
                 <div class="spinner"></div>
-                <span>번역 및 요약 처리 중입니다. 잠시 기다려주세요...</span>
+                <span>업로드 중입니다...</span>
             </div>
         </form>
     </div>
@@ -99,17 +113,31 @@
                     <th>#</th>
                     <th>파일명</th>
                     <th>언어</th>
+                    <th>상태</th>
                     <th>요약</th>
                     <th></th>
                 </tr>
                 </thead>
                 <tbody>
-                <tr th:each="doc : ${documents}">
+                <tr th:each="doc : ${documents}"
+                    th:class="${doc.status.name() == 'FAILED'} ? 'row-failed' : ''">
                     <td th:text="${doc.id}" style="color:#94a3b8;width:40px;"></td>
                     <td th:text="${doc.fileName}" style="font-weight:600;"></td>
                     <td><span class="lang-badge" th:text="${doc.originLang}"></span></td>
+                    <td>
+                        <span th:class="'badge badge-' + ${doc.status.name().toLowerCase()}"
+                              th:text="${doc.status.name()}"></span>
+                    </td>
                     <td class="summary-cell" th:text="${doc.summary}"></td>
-                    <td><a class="btn-view" th:href="@{/detail/{id}(id=${doc.id})}">보기</a></td>
+                    <td style="white-space:nowrap;">
+                        <a class="btn-view" th:href="@{/detail/{id}(id=${doc.id})}">보기</a>
+                        <form th:if="${doc.status.name() == 'FAILED'}"
+                              th:action="@{/retry/{id}(id=${doc.id})}"
+                              method="post"
+                              style="display:inline;">
+                            <button type="submit" class="btn-retry">재시도</button>
+                        </form>
+                    </td>
                 </tr>
                 </tbody>
             </table>
@@ -117,10 +145,16 @@
     </div>
 </div>
 
-<script>
+<script th:inline="javascript">
     document.getElementById('uploadForm').addEventListener('submit', function () {
         document.getElementById('uploadingMsg').classList.add('active');
     });
+
+    // PROCESSING 문서가 있으면 5초마다 페이지 갱신
+    const hasProcessing = /*[[${hasProcessing}]]*/ false;
+    if (hasProcessing) {
+        setTimeout(() => location.reload(), 5000);
+    }
 </script>
 </body>
 </html>

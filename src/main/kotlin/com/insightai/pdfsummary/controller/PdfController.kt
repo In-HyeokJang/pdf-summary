@@ -18,6 +18,15 @@ class PdfController(private val pdfService: PdfService) {
     ): ResponseEntity<PdfUploadResponse> =
         ResponseEntity.ok(pdfService.upload(file, sourceLang))
 
+    @PostMapping("/retry/{id}")
+    fun retry(@PathVariable id: Long): ResponseEntity<PdfUploadResponse> {
+        return try {
+            ResponseEntity.ok(pdfService.retry(id))
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.badRequest().build()
+        }
+    }
+
     @GetMapping("/list")
     fun list(): ResponseEntity<List<PdfSummaryResponse>> =
         ResponseEntity.ok(pdfService.list())
