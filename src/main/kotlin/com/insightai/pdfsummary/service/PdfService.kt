@@ -35,39 +35,68 @@ class PdfService(
             .digest(fileBytes)
             .joinToString("") { "%02x".format(it) }
 
-        val (doc, cached) = try {
+        data class LockResult(val doc: PdfDocument, val action: String, val reuseTranslation: String?, val reuseOriginal: String?)
+
+        val lockResult = try {
             tx.execute {
-                val existing = repository.findByFileHashForUpdate(fileHash)
-                if (existing != null) {
-                    existing to true
-                } else {
-                    repository.save(
-                        PdfDocument(
-                            fileName = file.originalFilename ?: "unknown.pdf",
-                            fileHash = fileHash,
-                            originLang = sourceLang,
-                            processMode = processMode,
-                            status = ProcessingStatus.PROCESSING,
-                            startedAt = LocalDateTime.now()
-                        )
-                    ) to false
+                val all = repository.findAllByFileHashForUpdate(fileHash)
+                val done = all.filter { it.status == ProcessingStatus.DONE || it.status == ProcessingStatus.CACHED }
+
+                // 이미 같은 결과가 있으면 CACHED
+                val cached = when (processMode) {
+                    ProcessMode.TRANSLATE -> done.firstOrNull { it.translatedText != null }
+                    ProcessMode.SUMMARIZE -> done.firstOrNull { it.summary != null }
+                    ProcessMode.BOTH      -> done.firstOrNull { it.translatedText != null && it.summary != null }
                 }
+                if (cached != null) return@execute LockResult(cached, "CACHED", null, null)
+
+                // 번역 데이터가 이미 있으면 fast-track (번역 단계 스킵)
+                val withTranslation = if (processMode != ProcessMode.TRANSLATE) {
+                    done.firstOrNull { it.translatedText != null }
+                } else null
+
+                val newDoc = repository.save(
+                    PdfDocument(
+                        fileName = file.originalFilename ?: "unknown.pdf",
+                        fileHash = fileHash,
+                        originLang = sourceLang,
+                        processMode = processMode,
+                        status = ProcessingStatus.PROCESSING,
+                        startedAt = LocalDateTime.now()
+                    )
+                )
+                val action = if (withTranslation != null) "FAST_TRACK" else "NEW"
+                LockResult(newDoc, action, withTranslation?.translatedText, withTranslation?.originalText)
             }!!
         } catch (e: DataAccessException) {
             log.warn("파일 락 획득 실패 (hash: {}...): {}", fileHash.take(8), e.message)
             throw IllegalStateException("처리 중인 요청이 있습니다. 잠시 후 다시 시도해주세요.")
         }
 
-        if (cached) {
-            log.info("중복 파일 감지 (hash: ${fileHash.take(8)}...) → 캐시 반환")
-            return PdfUploadResponse(id = doc.id, fileName = doc.fileName, summary = doc.summary, status = ProcessingStatus.CACHED, processMode = doc.processMode)
+        if (lockResult.action == "CACHED") {
+            log.info("캐시 반환: hash={}, mode={}, docId={}", fileHash.take(8), processMode, lockResult.doc.id)
+            return PdfUploadResponse(id = lockResult.doc.id, fileName = lockResult.doc.fileName, summary = lockResult.doc.summary, status = ProcessingStatus.CACHED, processMode = lockResult.doc.processMode)
         }
 
         val tStart = System.currentTimeMillis()
+        val doc = lockResult.doc
         return try {
-            val originalText = pdfParserService.extractText(file)
-            log.info("[UPLOAD] 텍스트 추출 완료: ${file.originalFilename}, ${originalText.length}자, ${System.currentTimeMillis() - tStart}ms")
+            // originalText: fast-track이면 기존 문서에서 복사, 아니면 파일에서 추출
+            val originalText = if (lockResult.reuseOriginal != null) {
+                log.info("[UPLOAD] 원문 재사용: ${file.originalFilename}")
+                lockResult.reuseOriginal
+            } else {
+                val text = pdfParserService.extractText(file)
+                log.info("[UPLOAD] 텍스트 추출 완료: ${file.originalFilename}, ${text.length}자, ${System.currentTimeMillis() - tStart}ms")
+                text
+            }
             doc.originalText = originalText
+
+            if (lockResult.reuseTranslation != null) {
+                doc.translatedText = lockResult.reuseTranslation
+                log.info("[UPLOAD] 번역 재사용 → 요약 단계만 실행: docId={}", doc.id)
+            }
+
             repository.save(doc)
             asyncProcessor.processAsync(doc.id, sourceLang)
             PdfUploadResponse(id = doc.id, fileName = doc.fileName, summary = null, status = ProcessingStatus.PROCESSING, processMode = processMode)

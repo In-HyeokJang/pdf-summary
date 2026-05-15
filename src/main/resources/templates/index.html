@@ -125,6 +125,7 @@
                     <th>#</th>
                     <th>파일명</th>
                     <th>언어</th>
+                    <th>모드</th>
                     <th>상태</th>
                     <th>요약</th>
                     <th></th>
@@ -136,6 +137,7 @@
                     <td th:text="${doc.id}" style="color:#94a3b8;width:40px;"></td>
                     <td th:text="${doc.fileName}" style="font-weight:600;"></td>
                     <td><span class="lang-badge" th:text="${doc.originLang}"></span></td>
+                    <td th:text="${doc.processMode?.name()}" style="font-size:0.8rem;color:#64748b;"></td>
                     <td>
                         <span th:class="'badge badge-' + ${doc.status.name().toLowerCase()}"
                               th:text="${doc.status.name()}"></span>

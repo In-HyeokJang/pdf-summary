@@ -64,15 +64,26 @@ class PdfAsyncProcessor(
     }
 
     private fun doSummarize(docId: Long, originalText: String, sourceLang: String, tStart: Long) {
+        val doc = repository.findByIdOrNull(docId)!!
+
+        // fast-track: 이미 번역본이 있으면 한국어 소요약 사용 (더 빠르고 품질 좋음)
+        val (inputText, useKoreanSummarizer) = if (doc.translatedText != null) {
+            log.info("[ASYNC] 번역본 재사용 → 한국어 소요약: id={}", docId)
+            doc.translatedText!! to true
+        } else {
+            originalText to false
+        }
+
         val chunks = pdfParserService.splitIntoChunks(
-            originalText, maxChunkSize = vllmProperties.summaryChunkSize, overlapSize = 0
+            inputText, maxChunkSize = vllmProperties.summaryChunkSize, overlapSize = 0
         )
-        log.info("[ASYNC] 원문 소요약 시작: id={}, {}청크", docId, chunks.size)
+        log.info("[ASYNC] 소요약 시작: id={}, {}청크, korean={}", docId, chunks.size, useKoreanSummarizer)
         val chunkSummaries: List<String> = Flux.fromIterable(chunks.withIndex().toList())
             .flatMapSequential({ (i, chunk) ->
                 log.info("[ASYNC] 소요약 요청: {}/{}", i + 1, chunks.size)
-                vllmService.summarizeFromSourceAsync(chunk, sourceLang)
-                    .doOnSuccess { log.info("[ASYNC] 소요약 완료: {}/{}", i + 1, chunks.size) }
+                val mono = if (useKoreanSummarizer) vllmService.chunkSummarizeAsync(chunk)
+                           else vllmService.summarizeFromSourceAsync(chunk, sourceLang)
+                mono.doOnSuccess { log.info("[ASYNC] 소요약 완료: {}/{}", i + 1, chunks.size) }
             }, vllmProperties.summaryConcurrency)
             .collectList()
             .block()!!
@@ -81,7 +92,6 @@ class PdfAsyncProcessor(
         val summary = vllmService.summarize(reducedInput)
 
         val elapsed = (System.currentTimeMillis() - tStart) / 1000
-        val doc = repository.findByIdOrNull(docId)!!
         doc.summary = summary
         doc.status = ProcessingStatus.DONE
         doc.completedAt = LocalDateTime.now()
@@ -91,7 +101,10 @@ class PdfAsyncProcessor(
     }
 
     private fun doTranslateAndSummarize(docId: Long, originalText: String, sourceLang: String, tStart: Long) {
-        val translatedText = translateText(docId, originalText, sourceLang)
+        val doc = repository.findByIdOrNull(docId)!!
+        // fast-track: 이미 번역본이 있으면 번역 단계 스킵
+        val translatedText = doc.translatedText?.also { log.info("[ASYNC] 번역본 재사용: id={}", docId) }
+            ?: translateText(docId, originalText, sourceLang)
 
         val summaryChunks = pdfParserService.splitIntoChunks(
             translatedText, maxChunkSize = vllmProperties.summaryChunkSize, overlapSize = 0
@@ -110,7 +123,6 @@ class PdfAsyncProcessor(
         val summary = vllmService.summarize(reducedInput)
 
         val elapsed = (System.currentTimeMillis() - tStart) / 1000
-        val doc = repository.findByIdOrNull(docId)!!
         doc.translatedText = translatedText
         doc.summary = summary
         doc.status = ProcessingStatus.DONE

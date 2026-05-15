@@ -12,12 +12,10 @@ import org.springframework.data.repository.query.Param
 import java.time.LocalDateTime
 
 interface PdfDocumentRepository : JpaRepository<PdfDocument, Long> {
-    fun findByFileHash(fileHash: String): PdfDocument?
-
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @QueryHints(QueryHint(name = "jakarta.persistence.lock.timeout", value = "3000"))
     @Query("SELECT p FROM PdfDocument p WHERE p.fileHash = :fileHash")
-    fun findByFileHashForUpdate(@Param("fileHash") fileHash: String): PdfDocument?
+    fun findAllByFileHashForUpdate(@Param("fileHash") fileHash: String): List<PdfDocument>
 
     fun findByStatusAndStartedAtBefore(status: ProcessingStatus, before: LocalDateTime): List<PdfDocument>
 }
