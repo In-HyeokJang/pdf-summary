@@ -66,7 +66,9 @@
 <div class="container">
     <div class="top-bar">
         <a class="btn-back" href="/">← 목록으로</a>
-        <a class="btn-download" th:href="@{/download/{id}(id=${doc.id})}">⬇ PDF 다운로드</a>
+        <a class="btn-download"
+           th:if="${doc.translatedText != null}"
+           th:href="@{/download/{id}(id=${doc.id})}">⬇ PDF 다운로드</a>
         <span class="page-title" th:text="${doc.fileName}"></span>
     </div>
 
@@ -78,6 +80,7 @@
     <div class="meta">
         <span class="meta-item" th:text="'원본 언어: ' + ${doc.originLang}"></span>
         <span class="meta-item" th:text="'업로드: ' + ${#temporals.format(doc.createdAt, 'yyyy-MM-dd HH:mm')}"></span>
+        <span class="meta-item" th:text="'처리 모드: ' + ${doc.processMode.name()}"></span>
         <span th:class="'badge badge-' + ${doc.status.name().toLowerCase()}"
               th:text="${doc.status.name()}"></span>
     </div>
@@ -102,12 +105,14 @@
         </div>
     </div>
 
-    <div class="card" th:if="${doc.status.name() == 'DONE' or doc.status.name() == 'CACHED'}">
+    <div class="card"
+         th:if="${(doc.status.name() == 'DONE' or doc.status.name() == 'CACHED') and doc.processMode.name() != 'TRANSLATE' and doc.summary != null}">
         <h2>요약</h2>
         <div class="summary-box" th:text="${doc.summary}"></div>
     </div>
 
-    <div class="card" th:if="${doc.status.name() == 'DONE' or doc.status.name() == 'CACHED'}">
+    <div class="card"
+         th:if="${(doc.status.name() == 'DONE' or doc.status.name() == 'CACHED') and doc.processMode.name() != 'SUMMARIZE' and doc.translatedText != null}">
         <h2>번역 전문</h2>
         <div class="tab-bar">
             <button class="tab active" onclick="switchTab('translated', this)">한국어 번역</button>

@@ -161,6 +161,33 @@ $text
         ), maxTokens = 1500)
     }
 
+    fun summarizeFromSourceAsync(chunk: String, sourceLang: String): Mono<String> {
+        val (baseUrl, model) = properties.resolve(sourceLang)
+        val langName = when (sourceLang.uppercase()) {
+            "EN" -> "English"
+            "ZH" -> "Chinese"
+            "JA" -> "Japanese"
+            else -> sourceLang
+        }
+        val system = """
+다음 ${langName} 텍스트의 핵심 내용을 한국어 3문장으로 요약하세요.
+
+출력 형식 (3문장 고정):
+1문장: 이 단락의 핵심 주장 1개 (수치·고유명사·모델명 포함)
+2문장: 핵심 주장을 뒷받침하는 근거 또는 방법
+3문장: 추가 근거 또는 결과 수치
+
+규칙:
+- 한국어로만 출력. ${langName} 단어 혼용 금지.
+- 수치·단위·모델명은 원문 표기 유지.
+- 3문장 초과 금지.
+        """.trimIndent()
+        return callAsync(webClientFor(baseUrl), model, listOf(
+            VllmRequest.Message(role = "system", content = system),
+            VllmRequest.Message(role = "user", content = chunk)
+        ), maxTokens = 500)
+    }
+
     fun summarize(text: String): String = summarizeAsync(text).block() ?: ""
 
     private fun callAsync(

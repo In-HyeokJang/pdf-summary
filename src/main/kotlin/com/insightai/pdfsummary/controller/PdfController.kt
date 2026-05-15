@@ -1,5 +1,6 @@
 package com.insightai.pdfsummary.controller
 
+ import com.insightai.pdfsummary.domain.ProcessMode
 import com.insightai.pdfsummary.dto.PdfSummaryResponse
 import com.insightai.pdfsummary.dto.PdfUploadResponse
 import com.insightai.pdfsummary.service.PdfService
@@ -14,9 +15,10 @@ class PdfController(private val pdfService: PdfService) {
     @PostMapping("/upload")
     fun upload(
         @RequestParam file: MultipartFile,
-        @RequestParam sourceLang: String
+        @RequestParam sourceLang: String,
+        @RequestParam(defaultValue = "BOTH") processMode: String
     ): ResponseEntity<PdfUploadResponse> =
-        ResponseEntity.ok(pdfService.upload(file, sourceLang))
+        ResponseEntity.ok(pdfService.upload(file, sourceLang, runCatching { ProcessMode.valueOf(processMode) }.getOrDefault(ProcessMode.BOTH)))
 
     @PostMapping("/retry/{id}")
     fun retry(@PathVariable id: Long): ResponseEntity<PdfUploadResponse> {

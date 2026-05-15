@@ -1,5 +1,6 @@
 package com.insightai.pdfsummary.controller
 
+import com.insightai.pdfsummary.domain.ProcessMode
 import com.insightai.pdfsummary.domain.ProcessingStatus
 import com.insightai.pdfsummary.service.PdfExportService
 import com.insightai.pdfsummary.service.PdfService
@@ -31,10 +32,17 @@ class PageController(
     fun upload(
         @RequestParam file: MultipartFile,
         @RequestParam sourceLang: String,
+        @RequestParam(defaultValue = "BOTH") processMode: String,
         redirectAttributes: RedirectAttributes
     ): String {
-        val result = pdfService.upload(file, sourceLang)
-        redirectAttributes.addFlashAttribute("message", "접수 완료: ${result.fileName} — 백그라운드에서 번역 처리 중입니다.")
+        val mode = runCatching { ProcessMode.valueOf(processMode) }.getOrDefault(ProcessMode.BOTH)
+        val result = pdfService.upload(file, sourceLang, mode)
+        val modeLabel = when (mode) {
+            ProcessMode.TRANSLATE -> "번역"
+            ProcessMode.SUMMARIZE -> "요약"
+            ProcessMode.BOTH      -> "번역 + 요약"
+        }
+        redirectAttributes.addFlashAttribute("message", "접수 완료: ${result.fileName} — 백그라운드에서 ${modeLabel} 처리 중입니다.")
         return "redirect:/"
     }
 

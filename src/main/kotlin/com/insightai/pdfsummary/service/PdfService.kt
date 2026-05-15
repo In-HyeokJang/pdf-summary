@@ -1,6 +1,7 @@
 package com.insightai.pdfsummary.service
 
 import com.insightai.pdfsummary.domain.PdfDocument
+import com.insightai.pdfsummary.domain.ProcessMode
 import com.insightai.pdfsummary.domain.ProcessingStatus
 import com.insightai.pdfsummary.dto.PdfSummaryResponse
 import com.insightai.pdfsummary.dto.PdfUploadResponse
@@ -28,7 +29,7 @@ class PdfService(
     private val log = LoggerFactory.getLogger(PdfService::class.java)
     private val tx = TransactionTemplate(txManager)
 
-    fun upload(file: MultipartFile, sourceLang: String): PdfUploadResponse {
+    fun upload(file: MultipartFile, sourceLang: String, processMode: ProcessMode = ProcessMode.BOTH): PdfUploadResponse {
         val fileBytes = file.bytes
         val fileHash = MessageDigest.getInstance("SHA-256")
             .digest(fileBytes)
@@ -45,6 +46,7 @@ class PdfService(
                             fileName = file.originalFilename ?: "unknown.pdf",
                             fileHash = fileHash,
                             originLang = sourceLang,
+                            processMode = processMode,
                             status = ProcessingStatus.PROCESSING,
                             startedAt = LocalDateTime.now()
                         )
@@ -58,7 +60,7 @@ class PdfService(
 
         if (cached) {
             log.info("중복 파일 감지 (hash: ${fileHash.take(8)}...) → 캐시 반환")
-            return PdfUploadResponse(id = doc.id, fileName = doc.fileName, summary = doc.summary, status = ProcessingStatus.CACHED)
+            return PdfUploadResponse(id = doc.id, fileName = doc.fileName, summary = doc.summary, status = ProcessingStatus.CACHED, processMode = doc.processMode)
         }
 
         val tStart = System.currentTimeMillis()
@@ -68,7 +70,7 @@ class PdfService(
             doc.originalText = originalText
             repository.save(doc)
             asyncProcessor.processAsync(doc.id, sourceLang)
-            PdfUploadResponse(id = doc.id, fileName = doc.fileName, summary = null, status = ProcessingStatus.PROCESSING)
+            PdfUploadResponse(id = doc.id, fileName = doc.fileName, summary = null, status = ProcessingStatus.PROCESSING, processMode = processMode)
         } catch (e: Exception) {
             log.error("텍스트 추출 실패: ${file.originalFilename}", e)
             markFailed(doc, tStart)
@@ -94,9 +96,9 @@ class PdfService(
         doc.processingTimeSec = null
         repository.save(doc)
 
-        log.info("[RETRY] id={}, file={}, lang={}", doc.id, doc.fileName, sourceLang)
+        log.info("[RETRY] id={}, file={}, lang={}, mode={}", doc.id, doc.fileName, sourceLang, doc.processMode)
         asyncProcessor.processAsync(doc.id, sourceLang)
-        return PdfUploadResponse(id = doc.id, fileName = doc.fileName, summary = null, status = ProcessingStatus.PROCESSING)
+        return PdfUploadResponse(id = doc.id, fileName = doc.fileName, summary = null, status = ProcessingStatus.PROCESSING, processMode = doc.processMode)
     }
 
     private fun markFailed(doc: PdfDocument, tStart: Long) {

@@ -31,6 +31,10 @@ class PdfDocument(
     val createdAt: LocalDateTime = LocalDateTime.now(),
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "process_mode", length = 20, nullable = false)
+    val processMode: ProcessMode = ProcessMode.BOTH,
+
+    @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 20, nullable = false)
     var status: ProcessingStatus = ProcessingStatus.PENDING,
 
