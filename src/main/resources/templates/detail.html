@@ -6,7 +6,7 @@
     <title th:text="'문서 상세 - ' + ${doc.fileName}">문서 상세</title>
     <link rel="stylesheet" th:href="@{/css/style.css}">
 </head>
-<body>
+<body th:data-status="${doc.status.name()}">
 <div class="container">
     <div class="top-bar">
         <a class="btn-back" href="/">← 목록으로</a>
@@ -16,55 +16,66 @@
         <span class="page-title" th:text="${doc.fileName}"></span>
     </div>
 
-    <!-- FAILED 경고 배너 -->
-    <div th:if="${doc.status.name() == 'FAILED'}" class="banner-failed">
-        번역 처리에 실패했습니다. 파일을 다시 업로드해 주세요.
+    <!-- PROCESSING: 전체 처리중 안내 -->
+    <div th:if="${doc.status.name() == 'PROCESSING'}" class="card processing-state">
+        <div class="spinner-lg"></div>
+        <h2 th:text="${doc.processMode?.name() == 'TRANSLATE' ? '번역중입니다.' : (doc.processMode?.name() == 'SUMMARIZE' ? '요약중입니다.' : '번역 + 요약중입니다.')}"></h2>
+        <p>완료되면 이 페이지가 자동으로 업데이트됩니다.</p>
     </div>
 
-    <div class="meta">
-        <span class="meta-item" th:text="'원본 언어: ' + ${doc.originLang}"></span>
-        <span class="meta-item" th:text="'업로드: ' + ${#temporals.format(doc.createdAt, 'yyyy-MM-dd HH:mm')}"></span>
-        <span class="meta-item" th:text="'처리 모드: ' + ${doc.processMode.name()}"></span>
-        <span th:class="'badge badge-' + ${doc.status.name().toLowerCase()}"
-              th:text="${doc.status.name()}"></span>
-    </div>
+    <!-- 처리 완료 또는 실패 -->
+    <th:block th:unless="${doc.status.name() == 'PROCESSING'}">
 
-    <!-- 처리 정보 -->
-    <div class="card">
-        <h2>처리 정보</h2>
-        <div class="info-grid">
-            <div class="info-item">
-                <span class="info-label">상태</span>
-                <span th:class="'badge badge-' + ${doc.status.name().toLowerCase()}"
-                      th:text="${doc.status.name()}"></span>
-            </div>
-            <div class="info-item" th:if="${doc.completedAt != null}">
-                <span class="info-label">완료 시각</span>
-                <span class="info-value" th:text="${#temporals.format(doc.completedAt, 'yyyy-MM-dd HH:mm:ss')}"></span>
-            </div>
-            <div class="info-item" th:if="${doc.processingTimeSec != null}">
-                <span class="info-label">처리 시간</span>
-                <span class="info-value" th:text="${doc.processingTimeSec} + '초'"></span>
+        <!-- FAILED 경고 배너 -->
+        <div th:if="${doc.status.name() == 'FAILED'}" class="banner-failed">
+            처리에 실패했습니다. 목록에서 재시도해 주세요.
+        </div>
+
+        <div class="meta">
+            <span class="meta-item">
+                <strong th:text="${doc.originLang == 'EN' ? '영어' : (doc.originLang == 'JA' ? '일본어' : '중국어')}"></strong>
+            </span>
+            <span class="meta-item" th:text="${doc.processMode?.displayName}"></span>
+            <span class="meta-item" th:text="${#temporals.format(doc.createdAt, 'yyyy-MM-dd HH:mm')}"></span>
+            <span th:class="'badge badge-' + ${doc.status.name().toLowerCase()}"
+                  th:text="${doc.status.displayName}"></span>
+        </div>
+
+        <!-- 처리 정보 -->
+        <div class="card" th:if="${doc.completedAt != null or doc.processingTimeSec != null}">
+            <h2>처리 정보</h2>
+            <div class="info-grid">
+                <div class="info-item" th:if="${doc.completedAt != null}">
+                    <span class="info-label">완료 시각</span>
+                    <span class="info-value" th:text="${#temporals.format(doc.completedAt, 'yyyy-MM-dd HH:mm:ss')}"></span>
+                </div>
+                <div class="info-item" th:if="${doc.processingTimeSec != null}">
+                    <span class="info-label">처리 시간</span>
+                    <span class="info-value" th:text="${doc.processingTimeSec} + '초'"></span>
+                </div>
             </div>
         </div>
-    </div>
 
-    <div class="card"
-         th:if="${(doc.status.name() == 'DONE' or doc.status.name() == 'CACHED') and doc.processMode.name() != 'TRANSLATE' and doc.summary != null}">
-        <h2>요약</h2>
-        <div class="summary-box" th:text="${doc.summary}"></div>
-    </div>
+        <!-- 요약 (SUMMARIZE 또는 BOTH 모드이고 summary가 있을 때) -->
+        <div class="card"
+             th:if="${doc.processMode?.name() != 'TRANSLATE' and doc.summary != null}">
+            <h2>요약</h2>
+            <div class="summary-box" th:text="${doc.summary}"></div>
+        </div>
 
-    <div class="card"
-         th:if="${(doc.status.name() == 'DONE' or doc.status.name() == 'CACHED') and doc.processMode.name() != 'SUMMARIZE' and doc.translatedText != null}">
-        <h2>번역 전문</h2>
-        <div class="tab-bar">
-            <button class="tab active" onclick="switchTab('translated', this)">한국어 번역</button>
+        <!-- 번역 전문 (TRANSLATE 또는 BOTH 모드이고 translatedText가 있을 때) -->
+        <div class="card"
+             th:if="${doc.processMode?.name() != 'SUMMARIZE' and doc.translatedText != null}">
+            <h2>번역 전문</h2>
+            <div class="tab-bar">
+                <button class="tab active" onclick="switchTab('translated', this)">한국어 번역</button>
+            </div>
+            <div id="translated" class="tab-content active">
+                <div class="text-box" th:text="${doc.translatedText}"></div>
+            </div>
         </div>
-        <div id="translated" class="tab-content active">
-            <div class="text-box" th:text="${doc.translatedText}"></div>
-        </div>
-    </div>
+
+    </th:block>
 </div>
 
 <script th:src="@{/js/detail.js}"></script>

@@ -25,9 +25,9 @@
                 <div class="form-group" style="max-width:160px;">
                     <label>원본 언어</label>
                     <select name="sourceLang">
-                        <option value="EN">영어 (EN)</option>
-                        <option value="JA">일본어 (JA)</option>
-                        <option value="ZH">중국어 (ZH)</option>
+                        <option value="EN">영어</option>
+                        <option value="JA">일본어</option>
+                        <option value="ZH">중국어</option>
                     </select>
                 </div>
                 <div class="btn-group">
@@ -51,35 +51,44 @@
             <table>
                 <thead>
                 <tr>
-                    <th>#</th>
                     <th>파일명</th>
-                    <th>언어</th>
-                    <th>모드</th>
-                    <th>상태</th>
-                    <th>요약</th>
-                    <th></th>
+                    <th class="col-lang">언어</th>
+                    <th class="col-mode">모드</th>
+                    <th class="col-status">상태</th>
+                    <th class="col-action"></th>
                 </tr>
                 </thead>
                 <tbody>
                 <tr th:each="doc : ${documents}"
                     th:class="${doc.status.name() == 'FAILED'} ? 'row-failed' : ''">
-                    <td th:text="${doc.id}" style="color:#94a3b8;width:40px;"></td>
-                    <td th:text="${doc.fileName}" style="font-weight:600;"></td>
-                    <td><span class="lang-badge" th:text="${doc.originLang}"></span></td>
-                    <td th:text="${doc.processMode?.name()}" style="font-size:0.8rem;color:#64748b;"></td>
+                    <td>
+                        <div style="font-weight:600;color:#1a2b4a;font-size:0.9rem;" th:text="${doc.fileName}"></div>
+                        <div class="meta-text" th:text="${#temporals.format(doc.createdAt, 'MM-dd HH:mm')}"></div>
+                    </td>
+                    <td style="font-size:0.84rem;color:#475569;font-weight:500;"
+                        th:text="${doc.originLang == 'EN' ? '영어' : (doc.originLang == 'JA' ? '일본어' : '중국어')}"></td>
+                    <td style="font-size:0.82rem;color:#64748b;"
+                        th:text="${doc.processMode?.displayName}"></td>
                     <td>
                         <span th:class="'badge badge-' + ${doc.status.name().toLowerCase()}"
-                              th:text="${doc.status.name()}"></span>
+                              th:text="${doc.status.displayName}"></span>
                     </td>
-                    <td class="summary-cell" th:text="${doc.summary}"></td>
-                    <td style="white-space:nowrap;">
-                        <a class="btn-view" th:href="@{/detail/{id}(id=${doc.id})}">보기</a>
-                        <form th:if="${doc.status.name() == 'FAILED'}"
-                              th:action="@{/retry/{id}(id=${doc.id})}"
-                              method="post"
-                              style="display:inline;">
-                            <button type="submit" class="btn-retry">재시도</button>
-                        </form>
+                    <td class="col-action" style="text-align:right;">
+                        <!-- PROCESSING: 진행 상태 텍스트 (링크 없음) -->
+                        <th:block th:if="${doc.status.name() == 'PROCESSING'}">
+                            <span class="processing-label"
+                                  th:text="${doc.processMode?.name() == 'TRANSLATE' ? '번역중...' : (doc.processMode?.name() == 'SUMMARIZE' ? '요약중...' : '번역+요약중...')}"></span>
+                        </th:block>
+                        <!-- 그 외: 보기 버튼 -->
+                        <th:block th:unless="${doc.status.name() == 'PROCESSING'}">
+                            <a class="btn-view" th:href="@{/detail/{id}(id=${doc.id})}">상세보기</a>
+                            <form th:if="${doc.status.name() == 'FAILED'}"
+                                  th:action="@{/retry/{id}(id=${doc.id})}"
+                                  method="post"
+                                  style="display:inline;">
+                                <button type="submit" class="btn-retry">재시도</button>
+                            </form>
+                        </th:block>
                     </td>
                 </tr>
                 </tbody>
