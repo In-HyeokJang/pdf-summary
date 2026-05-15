@@ -13,6 +13,8 @@ class AsyncConfig {
         maxPoolSize = 4
         queueCapacity = 20
         setThreadNamePrefix("pdf-async-")
+        setWaitForTasksToCompleteOnShutdown(true)
+        setAwaitTerminationSeconds(600) // 10분: 대부분의 번역 완료 시간 커버
         initialize()
     }
 }

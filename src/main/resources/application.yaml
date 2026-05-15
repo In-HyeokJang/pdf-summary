@@ -29,7 +29,11 @@ spring:
       mode: always
       schema-locations: classpath:schema.sql
 
+  lifecycle:
+    timeout-per-shutdown-phase: 10m
+
 server:
+  shutdown: graceful
   servlet:
     session:
       tracking-modes: cookie
