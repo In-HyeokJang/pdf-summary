@@ -11,6 +11,19 @@ import org.springframework.stereotype.Component
 import reactor.core.publisher.Flux
 import java.time.LocalDateTime
 
+/**
+ * PDF 번역·요약 비동기 처리 파이프라인.
+ *
+ * `@Async`는 같은 빈 내부 호출 시 Spring 프록시를 우회하므로,
+ * [PdfService]와 별도 빈으로 분리하여 `@Async("pdfTaskExecutor")`가 올바르게 적용된다.
+ *
+ * 처리 모드별 진입점:
+ * - TRANSLATE → [doTranslate]
+ * - SUMMARIZE → [doSummarize] (번역본 있으면 fast-track: 한국어 소요약 사용)
+ * - BOTH      → [doTranslateAndSummarize] (번역본 있으면 번역 단계 스킵)
+ *
+ * 예외 발생 시 catch 블록이 즉시 status=FAILED로 업데이트한다.
+ */
 @Component
 class PdfAsyncProcessor(
     private val pdfParserService: PdfParserService,
@@ -20,6 +33,14 @@ class PdfAsyncProcessor(
 ) {
     private val log = LoggerFactory.getLogger(PdfAsyncProcessor::class.java)
 
+    /**
+     * 문서 ID를 받아 processMode에 따라 번역·요약 파이프라인을 비동기 실행한다.
+     *
+     * `pdfTaskExecutor` 스레드 풀에서 실행되며, 완료 또는 실패 시 DB 상태를 업데이트한다.
+     *
+     * @param docId 처리할 [PdfDocument]의 DB 기본키
+     * @param sourceLang 원문 언어 코드 (EN / JA / ZH)
+     */
     @Async("pdfTaskExecutor")
     fun processAsync(docId: Long, sourceLang: String) {
         val doc = repository.findByIdOrNull(docId) ?: run {

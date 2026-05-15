@@ -18,6 +18,15 @@ import org.springframework.web.multipart.MultipartFile
 import java.security.MessageDigest
 import java.time.LocalDateTime
 
+/**
+ * PDF 업로드·조회·재시도의 진입점이 되는 핵심 서비스.
+ *
+ * 동기 흐름(HTTP 요청 내): SHA-256 해시 중복 확인 → 텍스트 추출 → DB 저장 → 즉시 반환.
+ * 비동기 흐름: [PdfAsyncProcessor.processAsync]에 위임하여 백그라운드에서 번역·요약 수행.
+ *
+ * 중복 업로드는 비관적 락([PdfDocumentRepository.findAllByFileHashForUpdate])으로 경쟁 조건을 방지하며,
+ * 이미 완료된 결과가 있으면 CACHED 상태로 즉시 반환한다.
+ */
 @Service
 class PdfService(
     private val pdfParserService: PdfParserService,
@@ -29,6 +38,18 @@ class PdfService(
     private val log = LoggerFactory.getLogger(PdfService::class.java)
     private val tx = TransactionTemplate(txManager)
 
+    /**
+     * PDF 파일을 업로드하고 비동기 처리를 시작한다.
+     *
+     * 동일 파일 해시 + 동일 processMode의 완료 문서가 있으면 CACHED 상태로 즉시 반환한다.
+     * 번역본만 있고 SUMMARIZE/BOTH 모드 요청 시 fast-track으로 번역 단계를 건너뛴다.
+     *
+     * @param file 업로드된 PDF 파일 (최대 100MB)
+     * @param sourceLang 원문 언어 코드 (EN / JA / ZH)
+     * @param processMode 처리 모드 (기본값: BOTH)
+     * @return 처리 접수 또는 캐시 결과를 담은 [PdfUploadResponse]
+     * @throws IllegalStateException 동시 중복 업로드 락 획득 실패 시
+     */
     fun upload(file: MultipartFile, sourceLang: String, processMode: ProcessMode = ProcessMode.BOTH): PdfUploadResponse {
         val fileBytes = file.bytes
         val fileHash = MessageDigest.getInstance("SHA-256")
@@ -107,6 +128,17 @@ class PdfService(
         }
     }
 
+    /**
+     * FAILED 상태 문서를 재처리한다.
+     *
+     * 저장된 [PdfDocument.originalText]를 재사용하므로 파일을 다시 업로드할 필요가 없다.
+     * FAILED 상태가 아닌 문서에 호출하면 [IllegalArgumentException]이 발생한다.
+     *
+     * @param id 재처리할 문서의 DB 기본키
+     * @return PROCESSING 상태의 [PdfUploadResponse]
+     * @throws NoSuchElementException 해당 id가 존재하지 않는 경우
+     * @throws IllegalArgumentException FAILED 상태가 아닌 경우
+     */
     fun retry(id: Long): PdfUploadResponse {
         val doc = repository.findByIdOrNull(id)
             ?: throw NoSuchElementException("Document not found: $id")
@@ -137,6 +169,12 @@ class PdfService(
         repository.save(doc)
     }
 
+    /**
+     * PROCESSING 상태가 [VllmProperties.staleTimeoutMinutes]분을 초과한 문서를 FAILED로 전환한다.
+     *
+     * 1분마다 실행되며, 애플리케이션 재시작 전에 시작된 작업이나 예기치 않은 스레드 종료로
+     * 영구 PROCESSING 상태에 남는 문서를 정리한다.
+     */
     @Scheduled(fixedDelay = 60_000)
     fun recoverStaleProcessing() {
         val threshold = LocalDateTime.now().minusMinutes(vllmProperties.staleTimeoutMinutes.toLong())
@@ -152,7 +190,7 @@ class PdfService(
     }
 
     fun list(): List<PdfSummaryResponse> =
-        repository.findAll().map { PdfSummaryResponse.from(it) }
+        repository.findAllByOrderByCreatedAtDesc().map { PdfSummaryResponse.from(it) }
 
     fun get(id: Long): PdfSummaryResponse =
         repository.findByIdOrNull(id)

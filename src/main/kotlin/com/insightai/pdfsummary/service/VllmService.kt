@@ -10,6 +10,18 @@ import org.springframework.web.reactive.function.client.WebClient
 import reactor.core.publisher.Mono
 import java.util.concurrent.ConcurrentHashMap
 
+/**
+ * vLLM OpenAI-호환 API를 호출하는 서비스.
+ *
+ * 언어별로 다른 모델을 사용하기 위해 [VllmProperties.resolve]로 엔드포인트를 선택하고,
+ * baseUrl별 [WebClient] 인스턴스를 [webClients] 맵에 캐싱하여 재사용한다.
+ *
+ * 주요 메서드:
+ * - [translateAsync] : 청크 단위 번역 (CJK 감지 시 프롬프트 전환 후 1회 재시도)
+ * - [chunkSummarizeAsync] : 한국어 번역본의 소요약 (Map 단계, 3문장)
+ * - [summarizeFromSourceAsync] : 원문 언어 소요약 (번역본 없을 때 SUMMARIZE 모드 Map 단계)
+ * - [summarizeAsync] / [summarize] : 소요약 합산본의 최종 요약 (Reduce 단계)
+ */
 @Service
 class VllmService(
     private val properties: VllmProperties,
@@ -21,6 +33,16 @@ class VllmService(
     private fun webClientFor(baseUrl: String): WebClient =
         webClients.getOrPut(baseUrl) { webClientConfig.buildWebClient(baseUrl) }
 
+    /**
+     * 단일 청크를 한국어로 번역하는 비동기 호출.
+     *
+     * 결과에 CJK 문자(한자·가나)가 15자 이상 포함되면 번역이 실패했다고 판단하고
+     * 한국어 프롬프트로 전환하여 1회 재시도한다.
+     *
+     * @param chunk 번역할 원문 텍스트 청크
+     * @param sourceLang 원문 언어 코드 (EN / JA / ZH)
+     * @return 한국어 번역 결과 [Mono]
+     */
     fun translateAsync(chunk: String, sourceLang: String): Mono<String> {
         val (baseUrl, model) = properties.resolve(sourceLang)
         log.debug("번역 모델: {} ({})", model, sourceLang)
@@ -71,6 +93,15 @@ Translation rules:
         ), maxTokens = 2500)
     }
 
+    /**
+     * 한국어 텍스트 청크를 3문장으로 소요약한다 (Map-Reduce의 Map 단계).
+     *
+     * 번역본이 있는 경우에 사용되며, 수치·고유명사 보존이 핵심이다.
+     * maxTokens=500으로 제한하여 빠른 병렬 처리를 유도한다.
+     *
+     * @param chunk 한국어 번역본 청크
+     * @return 3문장 소요약 [Mono]
+     */
     fun chunkSummarizeAsync(chunk: String): Mono<String> {
         val (baseUrl, model) = properties.resolve("DEFAULT")
         val system = """
@@ -93,6 +124,15 @@ Translation rules:
         ), maxTokens = 500)
     }
 
+    /**
+     * 소요약 합산 텍스트로 최종 구조화 요약을 생성한다 (Map-Reduce의 Reduce 단계).
+     *
+     * 문서 유형 5종(학술논문·특허·계약서·기술문서·보고서)을 자동 판별하고
+     * 유형별 섹션 헤더(###) 구조로 출력한다. maxTokens=1500.
+     *
+     * @param text 소요약 합산 텍스트 (최대 4000자로 사전 절단됨)
+     * @return 구조화된 최종 요약 [Mono]
+     */
     fun summarizeAsync(text: String): Mono<String> {
         val (baseUrl, model) = properties.resolve("DEFAULT")
         val system = """
@@ -161,6 +201,16 @@ $text
         ), maxTokens = 1500)
     }
 
+    /**
+     * 원문 언어 텍스트 청크를 한국어 3문장으로 소요약한다.
+     *
+     * SUMMARIZE 모드에서 번역본이 없을 때 사용된다. 원문 언어 모델(EN→EXAONE, ZH/JA→Qwen)로 호출하여
+     * 번역 없이 바로 한국어 소요약을 생성한다.
+     *
+     * @param chunk 원문 텍스트 청크
+     * @param sourceLang 원문 언어 코드 (EN / JA / ZH)
+     * @return 한국어 3문장 소요약 [Mono]
+     */
     fun summarizeFromSourceAsync(chunk: String, sourceLang: String): Mono<String> {
         val (baseUrl, model) = properties.resolve(sourceLang)
         val langName = when (sourceLang.uppercase()) {

@@ -36,7 +36,7 @@
                     <button type="submit" name="processMode" value="BOTH" class="btn-submit btn-both">번역 / 요약</button>
                 </div>
             </div>
-            <p class="notice-time">⏱ [번역 / 요약]은 문서 길이에 따라 약 5분 이상 소요될 수 있습니다.</p>
+            <p class="notice-time">⏱ [번역 / 요약]은 문서 길이에 따라 약 10~20분 이상 소요될 수 있습니다.</p>
             <div class="uploading" id="uploadingMsg">
                 <div class="spinner"></div>
                 <span>업로드 중입니다...</span>
@@ -65,9 +65,9 @@
                         <div style="font-weight:600;color:#1a2b4a;font-size:0.9rem;" th:text="${doc.fileName}"></div>
                         <div class="meta-text" th:text="${#temporals.format(doc.createdAt, 'MM-dd HH:mm')}"></div>
                     </td>
-                    <td style="font-size:0.84rem;color:#475569;font-weight:500;"
+                    <td style="font-size:0.84rem;color:#475569;font-weight:500;white-space:nowrap;"
                         th:text="${doc.originLang == 'EN' ? '영어' : (doc.originLang == 'JA' ? '일본어' : '중국어')}"></td>
-                    <td style="font-size:0.82rem;color:#64748b;"
+                    <td style="font-size:0.82rem;color:#64748b;white-space:nowrap;"
                         th:text="${doc.processMode?.displayName}"></td>
                     <td>
                         <span th:class="'badge badge-' + ${doc.status.name().toLowerCase()}"

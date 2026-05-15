@@ -2,19 +2,10 @@ spring:
   application:
     name: pdf-summary
 
-  config:
-    import: optional:classpath:application-local.yaml
-
   servlet:
     multipart:
       max-file-size: 100MB
       max-request-size: 110MB
-
-  datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/pdf_summary}
-    username: ${DB_USERNAME:sa}
-    password: ${DB_PASSWORD:}
-    driver-class-name: org.postgresql.Driver
 
   jpa:
     hibernate:
@@ -39,9 +30,6 @@ server:
       tracking-modes: cookie
 
 vllm:
-  default-base-url: ${VLLM_BASE_URL:http://localhost:8000}
-  default-model: ${VLLM_MODEL:Qwen/Qwen2.5-14B-Instruct}
-  language-models: {}
   translation-concurrency: 10
   summary-chunk-size: 5000
   summary-concurrency: 4

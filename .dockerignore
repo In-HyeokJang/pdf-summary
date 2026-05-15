@@ -1,0 +1,11 @@
+.gradle
+build/
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+.git/
+.env
+src/main/resources/application-local.yaml
+docs/

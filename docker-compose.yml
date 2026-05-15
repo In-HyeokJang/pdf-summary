@@ -1,0 +1,11 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8880:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      JAVA_TOOL_OPTIONS: "-Dfile.encoding=UTF-8 -Dstdout.encoding=UTF-8 -Duser.timezone=Asia/Seoul"
+      TZ: Asia/Seoul
+    volumes:
+      - ./src/main/resources/application-local.yaml:/app/application-local.yaml

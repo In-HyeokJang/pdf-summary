@@ -14,12 +14,30 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.multipart.MultipartFile
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
 
+/**
+ * Thymeleaf 페이지 렌더링 컨트롤러.
+ *
+ * REST API([PdfController])와 달리 브라우저 폼 제출·리다이렉트·Flash 메시지를 처리한다.
+ *
+ * 페이지 매핑:
+ * - `GET  /`              : 문서 목록 (`index.html`)
+ * - `POST /upload`        : 파일 업로드 → 결과에 따라 목록 또는 상세 페이지로 리다이렉트
+ * - `GET  /detail/{id}`   : 문서 상세 (`detail.html`)
+ * - `POST /retry/{id}`    : 재처리 → 상세 페이지로 리다이렉트
+ * - `GET  /download/{id}` : 번역본 PDF 다운로드
+ */
 @Controller
 class PageController(
     private val pdfService: PdfService,
     private val pdfExportService: PdfExportService
 ) {
 
+    /**
+     * 문서 목록 페이지를 렌더링한다.
+     *
+     * PROCESSING 상태 문서가 있으면 `hasProcessing=true`를 모델에 추가하여
+     * 뷰에서 5초 자동 새로고침을 활성화한다.
+     */
     @GetMapping("/")
     fun index(model: Model): String {
         val documents = pdfService.list()
@@ -28,6 +46,12 @@ class PageController(
         return "index"
     }
 
+    /**
+     * 파일 업로드 폼 제출을 처리한다.
+     *
+     * 중복(CACHED) 업로드 시 기존 문서 상세 페이지로 리다이렉트하며 Flash 메시지를 표시한다.
+     * 신규 처리 시 목록 페이지로 리다이렉트한다.
+     */
     @PostMapping("/upload")
     fun upload(
         @RequestParam file: MultipartFile,
