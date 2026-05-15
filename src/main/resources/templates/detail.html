@@ -16,6 +16,8 @@
         <span class="page-title" th:text="${doc.fileName}"></span>
     </div>
 
+    <div th:if="${message}" class="alert" th:text="${message}"></div>
+
     <!-- PROCESSING: 전체 처리중 안내 -->
     <div th:if="${doc.status.name() == 'PROCESSING'}" class="card processing-state">
         <div class="spinner-lg"></div>

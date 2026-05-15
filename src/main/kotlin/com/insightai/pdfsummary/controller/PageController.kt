@@ -37,6 +37,10 @@ class PageController(
     ): String {
         val mode = runCatching { ProcessMode.valueOf(processMode) }.getOrDefault(ProcessMode.BOTH)
         val result = pdfService.upload(file, sourceLang, mode)
+        if (result.status == ProcessingStatus.CACHED) {
+            redirectAttributes.addFlashAttribute("message", "이미 '${result.processMode.displayName}' 처리된 파일입니다. 기존 결과를 확인하세요.")
+            return "redirect:/detail/${result.id}"
+        }
         val modeLabel = when (mode) {
             ProcessMode.TRANSLATE -> "번역"
             ProcessMode.SUMMARIZE -> "요약"
