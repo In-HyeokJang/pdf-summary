@@ -4,63 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title th:text="'문서 상세 - ' + ${doc.fileName}">문서 상세</title>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f0f2f5; color: #333; }
-        .container { max-width: 960px; margin: 0 auto; padding: 32px 16px; }
-
-        /* 상단 바 */
-        .top-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
-        .btn-back { display: inline-flex; align-items: center; gap: 5px; background: #f1f5f9; color: #1a2b4a; border: none; border-radius: 7px; padding: 8px 16px; font-size: 0.86rem; cursor: pointer; text-decoration: none; font-weight: 600; transition: background 0.15s; white-space: nowrap; flex-shrink: 0; }
-        .btn-back:hover { background: #e2e8f0; }
-        .btn-download { display: inline-flex; align-items: center; gap: 5px; background: #10b981; color: #fff; border: none; border-radius: 7px; padding: 8px 16px; font-size: 0.86rem; cursor: pointer; text-decoration: none; font-weight: 600; transition: background 0.15s; white-space: nowrap; flex-shrink: 0; }
-        .btn-download:hover { background: #059669; }
-        .page-title { font-size: 1.25rem; color: #1a2b4a; font-weight: 700; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
-
-        /* FAILED 경고 배너 */
-        .banner-failed { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; border-radius: 8px; padding: 13px 18px; margin-bottom: 20px; font-size: 0.92rem; font-weight: 600; }
-
-        .meta { display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; align-items: center; }
-        .meta-item { background: #dbeafe; color: #1d4ed8; border-radius: 20px; padding: 4px 13px; font-size: 0.78rem; font-weight: 600; }
-
-        /* 상태 배지 */
-        .badge { display: inline-block; padding: 4px 13px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; }
-        .badge-done       { background: #d1fae5; color: #065f46; }
-        .badge-failed     { background: #fee2e2; color: #991b1b; }
-        .badge-processing { background: #dbeafe; color: #1d4ed8; }
-        .badge-cached     { background: #f1f5f9; color: #64748b; }
-        .badge-pending    { background: #fef3c7; color: #92400e; }
-
-        .card { background: #fff; border-radius: 12px; padding: 24px; box-shadow: 0 2px 10px rgba(0,0,0,0.07); margin-bottom: 20px; }
-        .card h2 { font-size: 1rem; color: #1a2b4a; border-bottom: 2px solid #3b82f6; padding-bottom: 10px; margin-bottom: 18px; }
-
-        /* 처리 정보 그리드 */
-        .info-grid { display: flex; gap: 24px; flex-wrap: wrap; }
-        .info-item { display: flex; flex-direction: column; gap: 4px; }
-        .info-label { font-size: 0.75rem; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.04em; }
-        .info-value { font-size: 0.92rem; color: #1a2b4a; font-weight: 600; }
-
-        .summary-box { background: #f0f7ff; border-left: 4px solid #3b82f6; border-radius: 6px; padding: 16px 20px; font-size: 0.92rem; line-height: 2; color: #1e3a5f; white-space: pre-wrap; }
-
-        .tab-bar { display: flex; gap: 4px; margin-bottom: 0; border-bottom: 2px solid #e2e8f0; }
-        .tab { background: transparent; border: none; border-radius: 6px 6px 0 0; padding: 8px 20px; font-size: 0.86rem; cursor: pointer; font-weight: 600; color: #94a3b8; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: color 0.15s; }
-        .tab.active { color: #3b82f6; border-bottom-color: #3b82f6; }
-        .tab-content { display: none; padding-top: 16px; }
-        .tab-content.active { display: block; }
-        .text-box { font-size: 0.88rem; line-height: 1.95; color: #444; white-space: pre-wrap; max-height: 520px; overflow-y: auto; }
-
-        /* 반응형 */
-        @media (max-width: 600px) {
-            .container { padding: 20px 14px; }
-            .top-bar { gap: 8px; }
-            .page-title { font-size: 1rem; width: 100%; order: 3; white-space: normal; }
-            .btn-back, .btn-download { font-size: 0.82rem; padding: 7px 13px; }
-            .card { padding: 16px; }
-            .summary-box { font-size: 0.88rem; padding: 13px 15px; }
-            .tab { padding: 7px 14px; font-size: 0.82rem; }
-            .info-grid { gap: 16px; }
-        }
-    </style>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
 </head>
 <body>
 <div class="container">
@@ -123,13 +67,6 @@
     </div>
 </div>
 
-<script>
-    function switchTab(id, btn) {
-        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-        document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
-        document.getElementById(id).classList.add('active');
-        btn.classList.add('active');
-    }
-</script>
+<script th:src="@{/js/detail.js}"></script>
 </body>
 </html>
