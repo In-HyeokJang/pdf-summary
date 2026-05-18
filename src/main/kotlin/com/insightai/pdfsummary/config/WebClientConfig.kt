@@ -27,7 +27,7 @@ class WebClientConfig {
      * - 응답/읽기/쓰기 타임아웃: 600초 (32B 모델 대응)
      * - 응답 버퍼: 10MB (대용량 번역 응답 처리)
      *
-     * @param baseUrl vLLM 서버 주소 (예: `http://192.168.0.3:8000`)
+     * @param baseUrl vLLM 서버 주소 (예: `http://x.x.x.x:8000`)
      */
     fun buildWebClient(baseUrl: String): WebClient {
         val httpClient = HttpClient.create()
