@@ -1,5 +1,6 @@
 package com.insightai.pdfsummary.repository
 
+import com.insightai.pdfsummary.domain.LlmProvider
 import com.insightai.pdfsummary.domain.PdfDocument
 import com.insightai.pdfsummary.domain.ProcessingStatus
 import jakarta.persistence.LockModeType
@@ -42,4 +43,11 @@ interface PdfDocumentRepository : JpaRepository<PdfDocument, Long> {
 
     /** 생성 시각 내림차순(최신순)으로 전체 목록을 반환한다. */
     fun findAllByOrderByCreatedAtDesc(): List<PdfDocument>
+
+    /**
+     * 지정 상태이면서 특정 LLM 제공자가 아닌 문서를 반환한다.
+     *
+     * 파인튜닝 학습 데이터 export 시 DONE + LOCAL이 아닌(Claude/Gemini 생성) 문서를 조회하는 데 사용된다.
+     */
+    fun findByStatusAndLlmProviderNot(status: ProcessingStatus, llmProvider: LlmProvider): List<PdfDocument>
 }

@@ -1,13 +1,16 @@
 package com.insightai.pdfsummary.service
 
+import com.insightai.pdfsummary.config.ExternalLlmProperties
+import com.insightai.pdfsummary.config.VllmProperties
+import com.insightai.pdfsummary.domain.LlmProvider
 import com.insightai.pdfsummary.domain.PdfDocument
 import com.insightai.pdfsummary.domain.ProcessMode
 import com.insightai.pdfsummary.domain.ProcessingStatus
 import com.insightai.pdfsummary.dto.PdfSummaryResponse
 import com.insightai.pdfsummary.dto.PdfUploadResponse
+import com.insightai.pdfsummary.dto.TrainingRecord
 import com.insightai.pdfsummary.repository.PdfDocumentRepository
 import org.slf4j.LoggerFactory
-import com.insightai.pdfsummary.config.VllmProperties
 import org.springframework.dao.DataAccessException
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.scheduling.annotation.Scheduled
@@ -33,6 +36,7 @@ class PdfService(
     private val asyncProcessor: PdfAsyncProcessor,
     private val repository: PdfDocumentRepository,
     private val vllmProperties: VllmProperties,
+    private val externalLlmProperties: ExternalLlmProperties,
     txManager: PlatformTransactionManager
 ) {
     private val log = LoggerFactory.getLogger(PdfService::class.java)
@@ -82,6 +86,7 @@ class PdfService(
                         fileHash = fileHash,
                         originLang = sourceLang,
                         processMode = processMode,
+                        llmProvider = externalLlmProperties.provider,
                         status = ProcessingStatus.PROCESSING,
                         startedAt = LocalDateTime.now()
                     )
@@ -196,4 +201,43 @@ class PdfService(
         repository.findByIdOrNull(id)
             ?.let { PdfSummaryResponse.from(it) }
             ?: throw NoSuchElementException("Document not found: $id")
+
+    /**
+     * DONE 상태이면서 LOCAL 외의 제공자(Claude/Gemini)로 생성된 결과를 학습 데이터로 반환한다.
+     *
+     * 반환된 [TrainingRecord] 목록은 컨트롤러에서 JSONL로 직렬화해 내보낸다.
+     * 하나의 PdfDocument가 번역과 요약 둘 다 있는 경우 두 개의 레코드로 분리된다.
+     */
+    fun exportTrainingData(): List<TrainingRecord> {
+        val docs = repository.findByStatusAndLlmProviderNot(ProcessingStatus.DONE, LlmProvider.LOCAL)
+        return docs.flatMap { doc ->
+            val lang = doc.originLang ?: "EN"
+            val langLabel = when (lang.uppercase()) { "EN" -> "영어"; "ZH" -> "중국어"; "JA" -> "일본어"; else -> lang }
+            val records = mutableListOf<TrainingRecord>()
+
+            if (doc.translatedText != null && doc.originalText != null) {
+                records += TrainingRecord(
+                    id = doc.id,
+                    task = "translate",
+                    lang = lang,
+                    instruction = "다음 ${langLabel} 텍스트를 한국어로 번역하세요.",
+                    input = doc.originalText!!,
+                    output = doc.translatedText!!,
+                    provider = doc.llmProvider.name
+                )
+            }
+            if (doc.summary != null && doc.originalText != null) {
+                records += TrainingRecord(
+                    id = doc.id,
+                    task = "summarize",
+                    lang = lang,
+                    instruction = "다음 문서를 한국어로 요약하세요.",
+                    input = doc.originalText!!,
+                    output = doc.summary!!,
+                    provider = doc.llmProvider.name
+                )
+            }
+            records
+        }
+    }
 }

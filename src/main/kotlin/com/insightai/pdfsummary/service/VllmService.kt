@@ -26,7 +26,7 @@ import java.util.concurrent.ConcurrentHashMap
 class VllmService(
     private val properties: VllmProperties,
     private val webClientConfig: WebClientConfig
-) {
+) : LlmService {
     private val log = LoggerFactory.getLogger(VllmService::class.java)
     private val webClients = ConcurrentHashMap<String, WebClient>()
 
@@ -43,7 +43,7 @@ class VllmService(
      * @param sourceLang 원문 언어 코드 (EN / JA / ZH)
      * @return 한국어 번역 결과 [Mono]
      */
-    fun translateAsync(chunk: String, sourceLang: String): Mono<String> {
+    override fun translateAsync(chunk: String, sourceLang: String): Mono<String> {
         val (baseUrl, model) = properties.resolve(sourceLang)
         log.debug("번역 모델: {} ({})", model, sourceLang)
         return callTranslate(webClientFor(baseUrl), model, chunk, sourceLang, retry = false)
@@ -102,7 +102,7 @@ Translation rules:
      * @param chunk 한국어 번역본 청크
      * @return 3문장 소요약 [Mono]
      */
-    fun chunkSummarizeAsync(chunk: String): Mono<String> {
+    override fun chunkSummarizeAsync(chunk: String): Mono<String> {
         val (baseUrl, model) = properties.resolve("DEFAULT")
         val system = """
 다음 텍스트의 핵심 내용을 한국어로 요약하세요.
@@ -133,7 +133,7 @@ Translation rules:
      * @param text 소요약 합산 텍스트 (최대 4000자로 사전 절단됨)
      * @return 구조화된 최종 요약 [Mono]
      */
-    fun summarizeAsync(text: String): Mono<String> {
+    override fun summarizeAsync(text: String): Mono<String> {
         val (baseUrl, model) = properties.resolve("DEFAULT")
         val system = """
 당신은 전문 문서 분석가입니다. 주어진 문서의 유형을 판별하고 해당 유형에 최적화된 한국어 구조화 요약을 작성하세요.
@@ -211,7 +211,7 @@ $text
      * @param sourceLang 원문 언어 코드 (EN / JA / ZH)
      * @return 한국어 3문장 소요약 [Mono]
      */
-    fun summarizeFromSourceAsync(chunk: String, sourceLang: String): Mono<String> {
+    override fun summarizeFromSourceAsync(chunk: String, sourceLang: String): Mono<String> {
         val (baseUrl, model) = properties.resolve(sourceLang)
         val langName = when (sourceLang.uppercase()) {
             "EN" -> "English"
@@ -238,7 +238,7 @@ $text
         ), maxTokens = 500)
     }
 
-    fun summarize(text: String): String = summarizeAsync(text).block() ?: ""
+    override fun summarize(text: String): String = summarizeAsync(text).block() ?: ""
 
     private fun callAsync(
         webClient: WebClient,

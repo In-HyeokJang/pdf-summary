@@ -17,3 +17,15 @@ vllm:
     JA:
       base-url: http://YOUR_VLLM_SERVER_IP:8000
       model: YOUR_JA_MODEL
+
+# 외부 LLM API — 학습 데이터 수집 시 사용
+# provider: LOCAL | CLAUDE | GEMINI
+# CLAUDE 또는 GEMINI 선택 시 해당 API 키 입력 필요
+external-llm:
+  provider: LOCAL
+  claude:
+    api-key: YOUR_ANTHROPIC_API_KEY
+    model: claude-sonnet-4-6
+  gemini:
+    api-key: YOUR_GEMINI_API_KEY
+    model: gemini-2.0-flash

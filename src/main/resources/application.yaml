@@ -34,3 +34,12 @@ vllm:
   summary-chunk-size: 5000
   summary-concurrency: 4
   stale-timeout-minutes: 30
+
+# 외부 LLM API 설정 (기본값: LOCAL = 로컬 vLLM 사용)
+# CLAUDE 또는 GEMINI로 변경하면 해당 API로 번역·요약 후 DB에 학습 데이터로 저장된다
+external-llm:
+  provider: LOCAL
+  claude:
+    model: claude-sonnet-4-6
+  gemini:
+    model: gemini-2.0-flash

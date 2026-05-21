@@ -1,5 +1,6 @@
 package com.insightai.pdfsummary.dto
 
+import com.insightai.pdfsummary.domain.LlmProvider
 import com.insightai.pdfsummary.domain.PdfDocument
 import com.insightai.pdfsummary.domain.ProcessMode
 import com.insightai.pdfsummary.domain.ProcessingStatus
@@ -22,6 +23,7 @@ import java.time.LocalDateTime
  * @property processingTimeSec 처리 소요 시간(초). 완료 전에는 null
  * @property status 현재 처리 상태
  * @property processMode 처리 모드
+ * @property llmProvider 번역·요약 생성에 사용한 LLM 제공자
  */
 data class PdfSummaryResponse(
     val id: Long,
@@ -33,7 +35,8 @@ data class PdfSummaryResponse(
     val completedAt: LocalDateTime?,
     val processingTimeSec: Long?,
     val status: ProcessingStatus,
-    val processMode: ProcessMode
+    val processMode: ProcessMode,
+    val llmProvider: LlmProvider
 ) {
     companion object {
         /**
@@ -51,7 +54,8 @@ data class PdfSummaryResponse(
             completedAt = doc.completedAt,
             processingTimeSec = doc.processingTimeSec,
             status = doc.status,
-            processMode = doc.processMode
+            processMode = doc.processMode,
+            llmProvider = doc.llmProvider
         )
     }
 }

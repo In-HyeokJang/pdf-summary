@@ -58,6 +58,14 @@ class PdfDocument(
     @Column(name = "process_mode", length = 20, nullable = false)
     val processMode: ProcessMode = ProcessMode.BOTH,
 
+    /**
+     * 번역·요약 생성에 사용한 LLM 제공자.
+     * LOCAL 외의 제공자로 생성된 결과는 /api/pdf/training/export 로 파인튜닝 학습 데이터로 내보낼 수 있다.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "llm_provider", length = 20, nullable = false)
+    val llmProvider: LlmProvider = LlmProvider.LOCAL,
+
     /** 현재 처리 상태. 비동기 처리 진행에 따라 갱신된다. */
     @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 20, nullable = false)
