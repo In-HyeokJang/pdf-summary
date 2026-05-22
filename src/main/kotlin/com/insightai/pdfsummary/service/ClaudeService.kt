@@ -51,13 +51,13 @@ class ClaudeService(
 
     // ── LlmService 구현 ────────────────────────────────────────────────────
 
-    override fun translateAsync(chunk: String, sourceLang: String): Mono<String> {
-        val (system, user) = buildTranslatePrompt(chunk, sourceLang, retry = false)
+    override fun translateAsync(chunk: String, sourceLang: String, customPrompt: String?): Mono<String> {
+        val (system, user) = buildTranslatePrompt(chunk, sourceLang, retry = false, customPrompt = customPrompt)
         return callAsync(system, user, maxTokens = 2500)
             .flatMap { result ->
                 if (result.count { it.code in 0x4E00..0x9FFF } > 15) {
                     log.warn("[Claude] CJK 감지 → 재시도 (lang={})", sourceLang)
-                    val (sys2, usr2) = buildTranslatePrompt(chunk, sourceLang, retry = true)
+                    val (sys2, usr2) = buildTranslatePrompt(chunk, sourceLang, retry = true, customPrompt = customPrompt)
                     callAsync(sys2, usr2, maxTokens = 2500)
                 } else {
                     Mono.just(result)
@@ -106,8 +106,8 @@ class ClaudeService(
         return callAsync(system, chunk, maxTokens = 500)
     }
 
-    override fun summarizeAsync(text: String): Mono<String> {
-        val system = """
+    override fun summarizeAsync(text: String, customPrompt: String?): Mono<String> {
+        val system = customPrompt ?: """
 당신은 전문 문서 분석가입니다. 주어진 문서의 유형을 판별하고 해당 유형에 최적화된 한국어 구조화 요약을 작성하세요.
 
 [문서 유형별 섹션 구조]
@@ -187,8 +187,10 @@ $text
             .map { sanitize(it.text()) }
     }
 
-    private fun buildTranslatePrompt(chunk: String, sourceLang: String, retry: Boolean): Pair<String, String> =
-        if (!retry) {
+    private fun buildTranslatePrompt(chunk: String, sourceLang: String, retry: Boolean, customPrompt: String? = null): Pair<String, String> =
+        if (customPrompt != null) {
+            customPrompt to "Translate the following $sourceLang text into Korean:\n\n$chunk"
+        } else if (!retry) {
             val system = """
 You are a professional Korean translator specializing in academic papers, patents, contracts, and technical documents.
 

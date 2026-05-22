@@ -37,9 +37,11 @@ class PdfController(private val pdfService: PdfService) {
     fun upload(
         @RequestParam file: MultipartFile,
         @RequestParam sourceLang: String,
-        @RequestParam(defaultValue = "BOTH") processMode: String
+        @RequestParam(defaultValue = "BOTH") processMode: String,
+        @RequestParam(required = false) translatePrompt: String?,
+        @RequestParam(required = false) summaryPrompt: String?
     ): ResponseEntity<PdfUploadResponse> =
-        ResponseEntity.ok(pdfService.upload(file, sourceLang, runCatching { ProcessMode.valueOf(processMode) }.getOrDefault(ProcessMode.BOTH)))
+        ResponseEntity.ok(pdfService.upload(file, sourceLang, runCatching { ProcessMode.valueOf(processMode) }.getOrDefault(ProcessMode.BOTH), translatePrompt, summaryPrompt))
 
     @PostMapping("/retry/{id}")
     fun retry(@PathVariable id: Long): ResponseEntity<PdfUploadResponse> {

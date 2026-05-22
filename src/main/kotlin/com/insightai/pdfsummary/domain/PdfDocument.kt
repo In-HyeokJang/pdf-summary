@@ -49,6 +49,14 @@ class PdfDocument(
     @Column(name = "summary", columnDefinition = "TEXT")
     var summary: String? = null,
 
+    /** 업로드 시 사용자가 입력한 번역 시스템 프롬프트. null이면 기본 전문 번역 프롬프트 사용. */
+    @Column(name = "custom_translate_prompt", columnDefinition = "TEXT")
+    val customTranslatePrompt: String? = null,
+
+    /** 업로드 시 사용자가 입력한 요약 시스템 프롬프트. null이면 문서 유형 자동 판별 요약 프롬프트 사용. */
+    @Column(name = "custom_summary_prompt", columnDefinition = "TEXT")
+    val customSummaryPrompt: String? = null,
+
     /** 레코드 최초 생성 시각. */
     @Column(name = "created_at")
     val createdAt: LocalDateTime = LocalDateTime.now(),

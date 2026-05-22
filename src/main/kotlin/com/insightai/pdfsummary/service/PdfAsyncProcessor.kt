@@ -24,10 +24,10 @@ import java.time.LocalDateTime
  * - SUMMARIZE → [doSummarize] (번역본 있으면 fast-track: 한국어 소요약 사용)
  * - BOTH      → [doTranslateAndSummarize] (번역본 있으면 번역 단계 스킵)
  *
- * LLM 제공자는 doc.llmProvider 에 따라 자동 선택된다.
- * LOCAL → VllmService, CLAUDE → ClaudeService, GEMINI → GeminiService.
+ * LLM 제공자는 doc.llmProvider + [GeminiQuotaMonitor] 상태에 따라 자동 선택된다.
+ * GEMINI quota 소진 시 [GeminiQuotaExhaustedException]을 통해 자동으로 LOCAL로 fallback한다.
  *
- * 예외 발생 시 catch 블록이 즉시 status=FAILED로 업데이트한다.
+ * 커스텀 프롬프트가 지정된 경우 해당 프롬프트를 사용하며, 없으면 하드코딩 기본값을 사용한다.
  */
 @Component
 class PdfAsyncProcessor(
@@ -37,13 +37,21 @@ class PdfAsyncProcessor(
     private val geminiService: GeminiService,
     private val repository: PdfDocumentRepository,
     private val vllmProperties: VllmProperties,
-    private val externalLlmProperties: ExternalLlmProperties
+    private val externalLlmProperties: ExternalLlmProperties,
+    private val geminiQuotaMonitor: GeminiQuotaMonitor
 ) {
     private val log = LoggerFactory.getLogger(PdfAsyncProcessor::class.java)
 
+    /**
+     * doc.llmProvider 와 Gemini quota 상태를 함께 고려하여 LLM 서비스를 선택한다.
+     * GEMINI quota 소진 중이면 즉시 LOCAL(vllmService)을 반환한다.
+     */
     private fun llmFor(provider: LlmProvider): LlmService = when (provider) {
+        LlmProvider.GEMINI -> if (geminiQuotaMonitor.isExhausted()) {
+            log.info("[ASYNC] Gemini quota 소진 → LOCAL 사용")
+            vllmService
+        } else geminiService
         LlmProvider.CLAUDE -> claudeService
-        LlmProvider.GEMINI -> geminiService
         LlmProvider.LOCAL  -> vllmService
     }
 
@@ -52,7 +60,7 @@ class PdfAsyncProcessor(
      *
      * `pdfTaskExecutor` 스레드 풀에서 실행되며, 완료 또는 실패 시 DB 상태를 업데이트한다.
      *
-     * @param docId 처리할 [PdfDocument]의 DB 기본키
+     * @param docId 처리할 PdfDocument의 DB 기본키
      * @param sourceLang 원문 언어 코드 (EN / JA / ZH)
      */
     @Async("pdfTaskExecutor")
@@ -71,12 +79,15 @@ class PdfAsyncProcessor(
 
         val tStart = System.currentTimeMillis()
         val llm = llmFor(doc.llmProvider)
-        log.info("[ASYNC] provider={}, mode={}, id={}", doc.llmProvider, doc.processMode, docId)
+        val translatePrompt = doc.customTranslatePrompt?.takeIf { it.isNotBlank() }
+        val summaryPrompt = doc.customSummaryPrompt?.takeIf { it.isNotBlank() }
+        log.info("[ASYNC] provider={}, mode={}, id={}, customTranslate={}, customSummary={}",
+            doc.llmProvider, doc.processMode, docId, translatePrompt != null, summaryPrompt != null)
         try {
             when (doc.processMode) {
-                ProcessMode.TRANSLATE -> doTranslate(docId, originalText, sourceLang, tStart, llm)
-                ProcessMode.SUMMARIZE -> doSummarize(docId, originalText, sourceLang, tStart, llm)
-                ProcessMode.BOTH      -> doTranslateAndSummarize(docId, originalText, sourceLang, tStart, llm)
+                ProcessMode.TRANSLATE -> doTranslate(docId, originalText, sourceLang, tStart, llm, translatePrompt)
+                ProcessMode.SUMMARIZE -> doSummarize(docId, originalText, sourceLang, tStart, llm, summaryPrompt)
+                ProcessMode.BOTH      -> doTranslateAndSummarize(docId, originalText, sourceLang, tStart, llm, translatePrompt, summaryPrompt)
             }
         } catch (e: Exception) {
             log.error("[ASYNC] 처리 실패: id={}", docId, e)
@@ -88,8 +99,8 @@ class PdfAsyncProcessor(
         }
     }
 
-    private fun doTranslate(docId: Long, originalText: String, sourceLang: String, tStart: Long, llm: LlmService) {
-        val translatedText = translateText(docId, originalText, sourceLang, llm)
+    private fun doTranslate(docId: Long, originalText: String, sourceLang: String, tStart: Long, llm: LlmService, translatePrompt: String?) {
+        val translatedText = translateText(docId, originalText, sourceLang, llm, translatePrompt)
         val elapsed = (System.currentTimeMillis() - tStart) / 1000
         val doc = repository.findByIdOrNull(docId)!!
         doc.translatedText = translatedText
@@ -100,7 +111,7 @@ class PdfAsyncProcessor(
         log.info("[ASYNC] 번역 완료: id={}, {}초", docId, elapsed)
     }
 
-    private fun doSummarize(docId: Long, originalText: String, sourceLang: String, tStart: Long, llm: LlmService) {
+    private fun doSummarize(docId: Long, originalText: String, sourceLang: String, tStart: Long, llm: LlmService, summaryPrompt: String?) {
         val doc = repository.findByIdOrNull(docId)!!
 
         // fast-track: 이미 번역본이 있으면 한국어 소요약 사용 (더 빠르고 품질 좋음)
@@ -121,13 +132,24 @@ class PdfAsyncProcessor(
                 log.info("[ASYNC] 소요약 요청: {}/{}", i + 1, chunks.size)
                 val mono = if (useKoreanSummarizer) llm.chunkSummarizeAsync(chunk)
                            else llm.summarizeFromSourceAsync(chunk, sourceLang)
-                mono.doOnSuccess { log.info("[ASYNC] 소요약 완료: {}/{}", i + 1, chunks.size) }
+                mono
+                    .onErrorResume(GeminiQuotaExhaustedException::class.java) { _ ->
+                        log.warn("[FALLBACK] Gemini quota → LOCAL 소요약: chunk {}/{}", i + 1, chunks.size)
+                        if (useKoreanSummarizer) vllmService.chunkSummarizeAsync(chunk)
+                        else vllmService.summarizeFromSourceAsync(chunk, sourceLang)
+                    }
+                    .doOnSuccess { log.info("[ASYNC] 소요약 완료: {}/{}", i + 1, chunks.size) }
             }, vllmProperties.summaryConcurrency)
             .collectList()
             .block()!!
 
         val reducedInput = chunkSummaries.joinToString("\n\n").take(4000)
-        val summary = llm.summarize(reducedInput)
+        val summary = try {
+            llm.summarize(reducedInput, summaryPrompt)
+        } catch (e: GeminiQuotaExhaustedException) {
+            log.warn("[FALLBACK] Gemini quota → LOCAL 최종 요약: id={}", docId)
+            vllmService.summarize(reducedInput, summaryPrompt)
+        }
 
         val elapsed = (System.currentTimeMillis() - tStart) / 1000
         doc.summary = summary
@@ -138,11 +160,11 @@ class PdfAsyncProcessor(
         log.info("[ASYNC] 요약 완료: id={}, {}초", docId, elapsed)
     }
 
-    private fun doTranslateAndSummarize(docId: Long, originalText: String, sourceLang: String, tStart: Long, llm: LlmService) {
+    private fun doTranslateAndSummarize(docId: Long, originalText: String, sourceLang: String, tStart: Long, llm: LlmService, translatePrompt: String?, summaryPrompt: String?) {
         val doc = repository.findByIdOrNull(docId)!!
         // fast-track: 이미 번역본이 있으면 번역 단계 스킵
         val translatedText = doc.translatedText?.also { log.info("[ASYNC] 번역본 재사용: id={}", docId) }
-            ?: translateText(docId, originalText, sourceLang, llm)
+            ?: translateText(docId, originalText, sourceLang, llm, translatePrompt)
 
         val summaryChunks = pdfParserService.splitIntoChunks(
             translatedText, maxChunkSize = vllmProperties.summaryChunkSize, overlapSize = 0
@@ -153,13 +175,22 @@ class PdfAsyncProcessor(
             .flatMapSequential({ (i, chunk) ->
                 log.info("[ASYNC] 소요약 요청: {}/{}", i + 1, summaryChunks.size)
                 llm.chunkSummarizeAsync(chunk)
+                    .onErrorResume(GeminiQuotaExhaustedException::class.java) { _ ->
+                        log.warn("[FALLBACK] Gemini quota → LOCAL 소요약: chunk {}/{}", i + 1, summaryChunks.size)
+                        vllmService.chunkSummarizeAsync(chunk)
+                    }
                     .doOnSuccess { log.info("[ASYNC] 소요약 완료: {}/{}", i + 1, summaryChunks.size) }
             }, vllmProperties.summaryConcurrency)
             .collectList()
             .block()!!
 
         val reducedInput = chunkSummaries.joinToString("\n\n").take(4000)
-        val summary = llm.summarize(reducedInput)
+        val summary = try {
+            llm.summarize(reducedInput, summaryPrompt)
+        } catch (e: GeminiQuotaExhaustedException) {
+            log.warn("[FALLBACK] Gemini quota → LOCAL 최종 요약: id={}", docId)
+            vllmService.summarize(reducedInput, summaryPrompt)
+        }
 
         val elapsed = (System.currentTimeMillis() - tStart) / 1000
         doc.translatedText = translatedText
@@ -171,7 +202,7 @@ class PdfAsyncProcessor(
         log.info("[ASYNC] 번역+요약 완료: id={}, {}초", docId, elapsed)
     }
 
-    private fun translateText(docId: Long, originalText: String, sourceLang: String, llm: LlmService): String {
+    private fun translateText(docId: Long, originalText: String, sourceLang: String, llm: LlmService, translatePrompt: String?): String {
         val chunks = pdfParserService.splitIntoChunks(originalText)
         val concurrency = if (llm === vllmService) vllmProperties.translationConcurrency
                           else externalLlmProperties.translationConcurrency
@@ -182,7 +213,11 @@ class PdfAsyncProcessor(
             .flatMapSequential({ (i, chunk) ->
                 val t = System.currentTimeMillis()
                 log.info("[ASYNC] 청크 번역 요청: {}/{} ({}자)", i + 1, chunks.size, chunk.length)
-                llm.translateAsync(chunk, sourceLang)
+                llm.translateAsync(chunk, sourceLang, translatePrompt)
+                    .onErrorResume(GeminiQuotaExhaustedException::class.java) { _ ->
+                        log.warn("[FALLBACK] Gemini quota → LOCAL 번역: chunk {}/{}", i + 1, chunks.size)
+                        vllmService.translateAsync(chunk, sourceLang, translatePrompt)
+                    }
                     .doOnSuccess { log.info("[ASYNC] 청크 번역 완료: {}/{} ({}ms)", i + 1, chunks.size, System.currentTimeMillis() - t) }
             }, concurrency)
             .collectList()

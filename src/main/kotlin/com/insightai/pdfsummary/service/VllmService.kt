@@ -43,14 +43,14 @@ class VllmService(
      * @param sourceLang 원문 언어 코드 (EN / JA / ZH)
      * @return 한국어 번역 결과 [Mono]
      */
-    override fun translateAsync(chunk: String, sourceLang: String): Mono<String> {
+    override fun translateAsync(chunk: String, sourceLang: String, customPrompt: String?): Mono<String> {
         val (baseUrl, model) = properties.resolve(sourceLang)
         log.debug("번역 모델: {} ({})", model, sourceLang)
-        return callTranslate(webClientFor(baseUrl), model, chunk, sourceLang, retry = false)
+        return callTranslate(webClientFor(baseUrl), model, chunk, sourceLang, retry = false, customPrompt = customPrompt)
             .flatMap { result ->
                 if (result.count { it.code in 0x4E00..0x9FFF } > 15) {
                     log.warn("CJK 감지 → 재시도 (lang={})", sourceLang)
-                    callTranslate(webClientFor(baseUrl), model, chunk, sourceLang, retry = true)
+                    callTranslate(webClientFor(baseUrl), model, chunk, sourceLang, retry = true, customPrompt = customPrompt)
                 } else {
                     Mono.just(result)
                 }
@@ -59,9 +59,11 @@ class VllmService(
 
     private fun callTranslate(
         webClient: WebClient, model: String, chunk: String,
-        sourceLang: String, retry: Boolean
+        sourceLang: String, retry: Boolean, customPrompt: String? = null
     ): Mono<String> {
-        val (system, user) = if (!retry) {
+        val (system, user) = if (customPrompt != null) {
+            customPrompt to "Translate the following $sourceLang text into Korean:\n\n$chunk"
+        } else if (!retry) {
             ("""
 You are a professional Korean translator specializing in academic papers, patents, contracts, and technical documents.
 
@@ -133,9 +135,9 @@ Translation rules:
      * @param text 소요약 합산 텍스트 (최대 4000자로 사전 절단됨)
      * @return 구조화된 최종 요약 [Mono]
      */
-    override fun summarizeAsync(text: String): Mono<String> {
+    override fun summarizeAsync(text: String, customPrompt: String?): Mono<String> {
         val (baseUrl, model) = properties.resolve("DEFAULT")
-        val system = """
+        val system = customPrompt ?: """
 당신은 전문 문서 분석가입니다. 주어진 문서의 유형을 판별하고 해당 유형에 최적화된 한국어 구조화 요약을 작성하세요.
 
 [문서 유형별 섹션 구조]
@@ -238,7 +240,7 @@ $text
         ), maxTokens = 500)
     }
 
-    override fun summarize(text: String): String = summarizeAsync(text).block() ?: ""
+    override fun summarize(text: String, customPrompt: String?): String = summarizeAsync(text, customPrompt).block() ?: ""
 
     private fun callAsync(
         webClient: WebClient,

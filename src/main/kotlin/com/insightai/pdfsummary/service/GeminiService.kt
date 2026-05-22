@@ -16,13 +16,14 @@ import java.time.Duration
  * external-llm.provider=GEMINI 설정 시 PdfAsyncProcessor 가 이 서비스를 사용한다.
  * 번역·요약 결과는 DB에 llm_provider=GEMINI 로 저장되어 LoRA 파인튜닝 학습 데이터로 활용된다.
  *
- * Gemini API는 system_instruction 필드를 별도로 전달하며,
- * 모델 ID와 API key를 URL 경로와 쿼리 파라미터로 전달한다.
+ * 할당량 소진(429) 감지 시 [GeminiQuotaMonitor.markExhausted]를 호출하고
+ * [GeminiQuotaExhaustedException]을 throw하여 [PdfAsyncProcessor]의 LOCAL fallback을 트리거한다.
  */
 @Service
 class GeminiService(
     private val props: ExternalLlmProperties,
-    private val webClientConfig: WebClientConfig
+    private val webClientConfig: WebClientConfig,
+    private val quotaMonitor: GeminiQuotaMonitor
 ) : LlmService {
 
     private val log = LoggerFactory.getLogger(GeminiService::class.java)
@@ -55,13 +56,13 @@ class GeminiService(
 
     // ── LlmService 구현 ────────────────────────────────────────────────────
 
-    override fun translateAsync(chunk: String, sourceLang: String): Mono<String> {
-        val (system, user) = buildTranslatePrompt(chunk, sourceLang, retry = false)
+    override fun translateAsync(chunk: String, sourceLang: String, customPrompt: String?): Mono<String> {
+        val (system, user) = buildTranslatePrompt(chunk, sourceLang, retry = false, customPrompt = customPrompt)
         return callAsync(system, user, maxTokens = 2500)
             .flatMap { result ->
                 if (result.count { it.code in 0x4E00..0x9FFF } > 15) {
                     log.warn("[Gemini] CJK 감지 → 재시도 (lang={})", sourceLang)
-                    val (sys2, usr2) = buildTranslatePrompt(chunk, sourceLang, retry = true)
+                    val (sys2, usr2) = buildTranslatePrompt(chunk, sourceLang, retry = true, customPrompt = customPrompt)
                     callAsync(sys2, usr2, maxTokens = 2500)
                 } else {
                     Mono.just(result)
@@ -110,8 +111,8 @@ class GeminiService(
         return callAsync(system, chunk, maxTokens = 500)
     }
 
-    override fun summarizeAsync(text: String): Mono<String> {
-        val system = """
+    override fun summarizeAsync(text: String, customPrompt: String?): Mono<String> {
+        val system = customPrompt ?: """
 당신은 전문 문서 분석가입니다. 주어진 문서의 유형을 판별하고 해당 유형에 최적화된 한국어 구조화 요약을 작성하세요.
 
 [문서 유형별 섹션 구조]
@@ -177,6 +178,10 @@ $text
     // ── private 헬퍼 ───────────────────────────────────────────────────────
 
     private fun callAsync(system: String, user: String, maxTokens: Int): Mono<String> {
+        // 이미 quota 소진 상태이면 즉시 예외 반환 (API 호출 없이)
+        if (quotaMonitor.isExhausted()) {
+            return Mono.error(GeminiQuotaExhaustedException("Gemini quota currently exhausted, routing to LOCAL"))
+        }
         val model = props.gemini.model
         val apiKey = props.gemini.apiKey
         val request = GeminiRequest(
@@ -194,15 +199,24 @@ $text
                 Retry.backoff(5, Duration.ofSeconds(10))
                     .maxBackoff(Duration.ofSeconds(60))
                     .filter { it is WebClientResponseException && (it.statusCode.value() == 429 || it.statusCode.value() >= 500) }
-                    .doBeforeRetry { 
+                    .doBeforeRetry {
                         val ex = it.failure() as? WebClientResponseException
                         log.warn("[Gemini] ${ex?.statusCode?.value()} API 에러 → 재시도 ({}번째) Body: {}", it.totalRetries() + 1, ex?.responseBodyAsString)
                     }
             )
+            // 모든 재시도 소진 후 429이면 quota 소진으로 처리 → LOCAL fallback 트리거
+            .onErrorMap(WebClientResponseException::class.java) { ex ->
+                if (ex.statusCode.value() == 429) {
+                    quotaMonitor.markExhausted()
+                    GeminiQuotaExhaustedException("Gemini quota exhausted after all retries", ex)
+                } else ex
+            }
     }
 
-    private fun buildTranslatePrompt(chunk: String, sourceLang: String, retry: Boolean): Pair<String, String> =
-        if (!retry) {
+    private fun buildTranslatePrompt(chunk: String, sourceLang: String, retry: Boolean, customPrompt: String? = null): Pair<String, String> =
+        if (customPrompt != null) {
+            customPrompt to "Translate the following $sourceLang text into Korean:\n\n$chunk"
+        } else if (!retry) {
             val system = """
 You are a professional Korean translator specializing in academic papers, patents, contracts, and technical documents.
 

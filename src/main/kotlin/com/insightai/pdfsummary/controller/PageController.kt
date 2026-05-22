@@ -57,10 +57,12 @@ class PageController(
         @RequestParam file: MultipartFile,
         @RequestParam sourceLang: String,
         @RequestParam(defaultValue = "BOTH") processMode: String,
+        @RequestParam(required = false) translatePrompt: String?,
+        @RequestParam(required = false) summaryPrompt: String?,
         redirectAttributes: RedirectAttributes
     ): String {
         val mode = runCatching { ProcessMode.valueOf(processMode) }.getOrDefault(ProcessMode.BOTH)
-        val result = pdfService.upload(file, sourceLang, mode)
+        val result = pdfService.upload(file, sourceLang, mode, translatePrompt, summaryPrompt)
         if (result.status == ProcessingStatus.CACHED) {
             redirectAttributes.addFlashAttribute("message", "이미 '${result.processMode.displayName}' 처리된 파일입니다. 기존 결과를 확인하세요.")
             return "redirect:/detail/${result.id}"

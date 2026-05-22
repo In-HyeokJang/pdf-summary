@@ -54,7 +54,13 @@ class PdfService(
      * @return 처리 접수 또는 캐시 결과를 담은 [PdfUploadResponse]
      * @throws IllegalStateException 동시 중복 업로드 락 획득 실패 시
      */
-    fun upload(file: MultipartFile, sourceLang: String, processMode: ProcessMode = ProcessMode.BOTH): PdfUploadResponse {
+    fun upload(
+        file: MultipartFile,
+        sourceLang: String,
+        processMode: ProcessMode = ProcessMode.BOTH,
+        customTranslatePrompt: String? = null,
+        customSummaryPrompt: String? = null
+    ): PdfUploadResponse {
         val fileBytes = file.bytes
         val fileHash = MessageDigest.getInstance("SHA-256")
             .digest(fileBytes)
@@ -88,7 +94,9 @@ class PdfService(
                         processMode = processMode,
                         llmProvider = externalLlmProperties.provider,
                         status = ProcessingStatus.PROCESSING,
-                        startedAt = LocalDateTime.now()
+                         startedAt = LocalDateTime.now(),
+                        customTranslatePrompt = customTranslatePrompt?.takeIf { it.isNotBlank() },
+                        customSummaryPrompt = customSummaryPrompt?.takeIf { it.isNotBlank() }
                     )
                 )
                 val action = if (withTranslation != null) "FAST_TRACK" else "NEW"

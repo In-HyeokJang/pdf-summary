@@ -8,7 +8,6 @@ import org.apache.pdfbox.pdmodel.common.PDRectangle
 import org.apache.pdfbox.pdmodel.font.PDType0Font
 import org.springframework.stereotype.Service
 import java.io.ByteArrayOutputStream
-import java.io.File
 
 /**
  * 번역 결과를 한국어 PDF 파일로 내보내는 서비스.
@@ -16,13 +15,12 @@ import java.io.File
  * PDFBox를 사용하여 맑은 고딕(malgun.ttf) 폰트로 A4 PDF를 생성한다.
  * 요약 → 번역 전문 순서로 섹션을 구성하며, 페이지가 넘치면 자동으로 새 페이지를 추가한다.
  *
- * Windows 전용: 폰트 경로가 `C:/Windows/Fonts/malgun.ttf`로 고정되어 있어
- * Linux/Docker 환경에서는 폰트 파일이 없어 실패한다.
+ * 폰트는 classpath `/fonts/malgun.ttf` 에서 로드하므로
+ * `src/main/resources/fonts/malgun.ttf` 에 폰트 파일이 있어야 한다.
  */
 @Service
 class PdfExportService {
 
-    private val fontPath = "C:/Windows/Fonts/malgun.ttf"
     private val margin = 50f
     private val pageWidth = PDRectangle.A4.width - 2 * margin
     private val pageHeight = PDRectangle.A4.height
@@ -36,7 +34,9 @@ class PdfExportService {
     fun export(doc: PdfSummaryResponse): ByteArray {
         val out = ByteArrayOutputStream()
         PDDocument().use { pdDoc ->
-            val font = PDType0Font.load(pdDoc, File(fontPath))
+            val fontStream = PdfExportService::class.java.getResourceAsStream("/fonts/malgun.ttf")
+                ?: error("폰트 파일 없음: src/main/resources/fonts/malgun.ttf 에 malgun.ttf를 추가하세요")
+            val font = PDType0Font.load(pdDoc, fontStream, true)
 
             val sections = buildList {
                 add(16f to doc.fileName)

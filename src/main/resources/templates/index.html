@@ -37,6 +37,22 @@
                 </div>
             </div>
             <p class="notice-time">⏱ [번역 / 요약]은 문서 길이에 따라 약 10~20분 이상 소요될 수 있습니다.</p>
+
+            <details class="prompt-advanced">
+                <summary class="prompt-toggle">프롬프트 커스터마이즈 (선택 사항)</summary>
+                <div class="prompt-fields">
+                    <div class="form-group">
+                        <label>번역 프롬프트 (시스템)</label>
+                        <textarea name="translatePrompt" rows="3"
+                                  placeholder="비워두면 기본 전문 번역 프롬프트 사용&#10;예: 법률 계약서 전문 번역가입니다. 조항 번호와 당사자명을 원문 그대로 유지하세요."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>요약 프롬프트 (시스템)</label>
+                        <textarea name="summaryPrompt" rows="3"
+                                  placeholder="비워두면 문서 유형 자동 판별 요약 프롬프트 사용&#10;예: 특허 청구항 중심으로 발명의 핵심을 3줄 이내로 요약하세요."></textarea>
+                    </div>
+                </div>
+            </details>
             <div class="uploading" id="uploadingMsg">
                 <div class="spinner"></div>
                 <span>업로드 중입니다...</span>

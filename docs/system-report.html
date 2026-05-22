@@ -1,0 +1,1232 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDF 번역·요약 시스템 보고서</title>
+  <style>
+    :root {
+      --blue:    #3b82f6;
+      --indigo:  #6366f1;
+      --purple:  #9333ea;
+      --green:   #16a34a;
+      --orange:  #d97706;
+      --teal:    #0d9488;
+      --slate:   #475569;
+      --navy:    #1e3a5f;
+      --bg:      #f8fafc;
+      --card:    #ffffff;
+      --border:  #e2e8f0;
+      --text:    #1e293b;
+      --muted:   #64748b;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    /* ── Header ── */
+    header {
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 60%, #1e40af 100%);
+      color: white;
+      padding: 48px 60px 40px;
+      position: relative;
+      overflow: hidden;
+    }
+    header::before {
+      content: '';
+      position: absolute;
+      top: -60px; right: -60px;
+      width: 300px; height: 300px;
+      border-radius: 50%;
+      background: rgba(59,130,246,0.15);
+    }
+    header::after {
+      content: '';
+      position: absolute;
+      bottom: -80px; left: 30%;
+      width: 400px; height: 200px;
+      border-radius: 50%;
+      background: rgba(99,102,241,0.1);
+    }
+    .header-tag {
+      display: inline-block;
+      background: rgba(59,130,246,0.3);
+      border: 1px solid rgba(59,130,246,0.5);
+      color: #93c5fd;
+      font-size: 12px;
+      padding: 4px 14px;
+      border-radius: 20px;
+      margin-bottom: 16px;
+      letter-spacing: 1px;
+    }
+    header h1 {
+      font-size: 36px;
+      font-weight: 800;
+      margin-bottom: 10px;
+      position: relative; z-index: 1;
+    }
+    header p {
+      color: #93c5fd;
+      font-size: 15px;
+      position: relative; z-index: 1;
+    }
+    .header-meta {
+      margin-top: 24px;
+      display: flex;
+      gap: 32px;
+      position: relative; z-index: 1;
+    }
+    .header-meta span {
+      font-size: 13px;
+      color: #cbd5e1;
+    }
+    .header-meta strong { color: white; }
+
+    /* ── Layout ── */
+    main { max-width: 1200px; margin: 0 auto; padding: 40px 24px 80px; }
+
+    /* ── Section ── */
+    section { margin-bottom: 48px; }
+    .section-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--navy);
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .section-title::before {
+      content: '';
+      display: inline-block;
+      width: 4px; height: 22px;
+      background: var(--blue);
+      border-radius: 2px;
+    }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.06);
+    }
+
+    /* ── Chip grid ── */
+    .chip-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+    .chip {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      border: 1px solid currentColor;
+    }
+    .chip-blue   { background:#eff6ff; color:#1d4ed8; }
+    .chip-green  { background:#f0fdf4; color:#15803d; }
+    .chip-purple { background:#faf5ff; color:#7e22ce; }
+    .chip-orange { background:#fff7ed; color:#c2410c; }
+    .chip-teal   { background:#f0fdfa; color:#0f766e; }
+    .chip-slate  { background:#f8fafc; color:#334155; }
+
+    /* ── Flow diagram ── */
+    .flow-wrap {
+      overflow-x: auto;
+      padding-bottom: 8px;
+    }
+    .flow {
+      display: flex;
+      align-items: flex-start;
+      gap: 0;
+      min-width: 560px;
+    }
+    .flow-step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-width: 120px;
+      flex: 1;
+    }
+    .flow-sep {
+      flex-shrink: 0;
+      width: 28px;
+      padding-top: 33px;
+      text-align: center;
+      color: #94a3b8;
+      font-size: 20px;
+      line-height: 1;
+    }
+    .flow-box {
+      width: 100%;
+      border-radius: 10px;
+      padding: 14px 8px;
+      text-align: center;
+      color: white;
+      font-size: 12px;
+      font-weight: 700;
+      min-height: 90px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.12);
+    }
+    .flow-num {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.3);
+      font-size: 12px;
+      font-weight: 800;
+      margin-bottom: 2px;
+    }
+    .flow-sub {
+      font-size: 10px;
+      font-weight: 400;
+      opacity: .85;
+      margin-top: 2px;
+      line-height: 1.4;
+    }
+    .flow-label {
+      font-size: 10px;
+      color: var(--muted);
+      text-align: center;
+      margin-top: 6px;
+      padding: 0 4px;
+      min-height: 16px;
+    }
+    .bg-async {
+      background: #fffbf5;
+      border: 2px dashed #fcd9a7;
+      border-radius: 12px;
+      padding: 12px 16px 16px;
+      flex: 1;
+    }
+    .async-label {
+      font-size: 11px;
+      color: #b45309;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    /* ── LLM Provider cards ── */
+    .provider-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+    .provider-card {
+      border-radius: 12px;
+      padding: 20px;
+      border: 2px solid transparent;
+    }
+    .provider-card.gemini {
+      background: linear-gradient(135deg, #fefce8, #fef9c3);
+      border-color: #f59e0b;
+    }
+    .provider-card.claude {
+      background: linear-gradient(135deg, #fdf4ff, #f3e8ff);
+      border-color: #c084fc;
+    }
+    .provider-card.local {
+      background: linear-gradient(135deg, #f0fdfa, #ccfbf1);
+      border-color: #2dd4bf;
+    }
+    .provider-icon {
+      font-size: 28px;
+      margin-bottom: 8px;
+    }
+    .provider-name {
+      font-size: 16px;
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+    .provider-sub {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+    .provider-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .badge {
+      font-size: 11px;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-weight: 600;
+    }
+    .badge-yellow { background:#fef3c7; color:#92400e; }
+    .badge-purple { background:#ede9fe; color:#5b21b6; }
+    .badge-teal   { background:#ccfbf1; color:#065f46; }
+    .badge-blue   { background:#dbeafe; color:#1e40af; }
+    .badge-green  { background:#dcfce7; color:#14532d; }
+    .badge-red    { background:#fee2e2; color:#991b1b; }
+
+    /* ── Pipeline flow ── */
+    .pipeline {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+    .pipeline-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 0;
+      border-left: 3px solid var(--border);
+      padding-left: 20px;
+      position: relative;
+    }
+    .pipeline-row::before {
+      content: '';
+      position: absolute;
+      left: -6px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 9px; height: 9px;
+      border-radius: 50%;
+      background: var(--blue);
+      border: 2px solid white;
+      box-shadow: 0 0 0 2px var(--blue);
+    }
+    .pipeline-row:last-child { border-left: 3px solid transparent; }
+    .pipeline-num {
+      background: var(--blue);
+      color: white;
+      font-size: 12px;
+      font-weight: 800;
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .pipeline-content { flex: 1; }
+    .pipeline-title { font-weight: 700; font-size: 14px; }
+    .pipeline-desc { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .pipeline-code {
+      font-family: 'Consolas', monospace;
+      font-size: 12px;
+      background: #f1f5f9;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 12px;
+      margin-top: 6px;
+      color: #334155;
+    }
+
+    /* ── Infra grid ── */
+    .infra-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+    .infra-card {
+      border-radius: 10px;
+      padding: 18px;
+      border: 1px solid var(--border);
+    }
+    .infra-card h4 {
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .infra-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .infra-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--muted);
+      padding: 3px 0;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .infra-row:last-child { border-bottom: none; }
+    .infra-val { font-weight: 600; color: var(--text); }
+
+    /* ── API table ── */
+    .api-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .api-table th {
+      background: var(--navy);
+      color: white;
+      padding: 10px 14px;
+      text-align: left;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .api-table th:first-child { border-radius: 8px 0 0 0; }
+    .api-table th:last-child { border-radius: 0 8px 0 0; }
+    .api-table td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .api-table tr:last-child td { border-bottom: none; }
+    .api-table tr:nth-child(even) td { background: #f8fafc; }
+    .method {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 800;
+      font-family: monospace;
+    }
+    .method-get  { background:#dcfce7; color:#15803d; }
+    .method-post { background:#dbeafe; color:#1d4ed8; }
+    code {
+      font-family: 'Consolas', monospace;
+      font-size: 12px;
+      background: #f1f5f9;
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: #0f172a;
+    }
+
+    /* ── Status badges ── */
+    .status-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+    }
+    .status-dot {
+      width: 12px; height: 12px;
+      border-radius: 50%;
+    }
+
+    /* ── Todo list ── */
+    .todo-list { list-style: none; }
+    .todo-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+    .todo-list li:last-child { border-bottom: none; }
+    .todo-check {
+      width: 18px; height: 18px;
+      border: 2px solid var(--border);
+      border-radius: 4px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .todo-done { background: var(--green); border-color: var(--green); }
+    .todo-done::after {
+      content: '✓';
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 12px;
+      font-weight: 800;
+      height: 100%;
+    }
+
+    /* ── SVG embed ── */
+    .svg-container {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      background: white;
+      width: 100%;
+    }
+    .svg-container img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    /* ── Stat cards ── */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px;
+      text-align: center;
+    }
+    .stat-num {
+      font-size: 32px;
+      font-weight: 800;
+      color: var(--navy);
+      line-height: 1;
+    }
+    .stat-label {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+    .stat-card.highlight { background: var(--navy); }
+    .stat-card.highlight .stat-num { color: #60a5fa; }
+    .stat-card.highlight .stat-label { color: #93c5fd; }
+
+    /* ── Fallback flow ── */
+    .fallback-diagram {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      flex-wrap: wrap;
+    }
+    .fb-box {
+      border-radius: 10px;
+      padding: 12px 20px;
+      font-size: 13px;
+      font-weight: 700;
+      text-align: center;
+      min-width: 130px;
+    }
+    .fb-arrow {
+      font-size: 22px;
+      color: var(--muted);
+      padding: 0 8px;
+    }
+    .fb-label {
+      font-size: 10px;
+      font-weight: 400;
+      margin-top: 4px;
+      opacity: .8;
+    }
+
+    /* ── Footer ── */
+    footer {
+      background: #0f172a;
+      color: #64748b;
+      text-align: center;
+      padding: 24px;
+      font-size: 12px;
+    }
+    footer strong { color: #94a3b8; }
+
+    /* ── Responsive ── */
+    @media (max-width: 768px) {
+      header { padding: 32px 20px; }
+      header h1 { font-size: 24px; }
+      .provider-grid, .infra-grid, .stat-grid { grid-template-columns: 1fr; }
+      .flow { flex-direction: column; }
+      .flow-step + .flow-step::before { content: '↓'; left: 50%; transform: translateX(-50%); top: -16px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ============================================================ HEADER -->
+<header>
+  <div class="header-tag">SYSTEM REPORT · 2026-05-22</div>
+  <h1>PDF 번역·요약 시스템</h1>
+  <p>다국어 PDF (EN / ZH / JA) → 한국어 번역 + 요약 + LoRA 학습 데이터 수집 파이프라인</p>
+  <div class="header-meta">
+    <span><strong>Spring Boot</strong> 4.0.6</span>
+    <span><strong>Kotlin</strong> 2.2.21</span>
+    <span><strong>인프라</strong> DGX Spark GB10</span>
+    <span><strong>LLM</strong> EXAONE 3.5 32B · Qwen 2.5 14B · Gemini · Claude</span>
+  </div>
+</header>
+
+<main>
+
+  <!-- ============================================================ STATS -->
+  <div class="stat-grid" style="margin-top: 32px;">
+    <div class="stat-card highlight">
+      <div class="stat-num">4</div>
+      <div class="stat-label">LLM 제공자<br>(LOCAL / GEMINI / CLAUDE + fallback)</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num">3</div>
+      <div class="stat-label">지원 언어<br>EN · ZH · JA → KO</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num">3</div>
+      <div class="stat-label">처리 모드<br>번역 / 요약 / 번역+요약</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num">8</div>
+      <div class="stat-label">REST API 엔드포인트<br>(업로드·조회·내보내기 등)</div>
+    </div>
+  </div>
+
+  <!-- ============================================================ FEATURES -->
+  <section>
+    <div class="section-title">핵심 기능</div>
+    <div class="chip-grid">
+      <span class="chip chip-blue">SHA-256 중복 방지</span>
+      <span class="chip chip-blue">비관적 락 (FOR UPDATE)</span>
+      <span class="chip chip-green">@Async 비동기 처리</span>
+      <span class="chip chip-green">Map-Reduce 요약</span>
+      <span class="chip chip-purple">Gemini / Claude API 연동</span>
+      <span class="chip chip-purple">LoRA 학습 데이터 수집</span>
+      <span class="chip chip-orange">Gemini → LOCAL 자동 Fallback</span>
+      <span class="chip chip-teal">Stale 30분 자동 복구</span>
+      <span class="chip chip-teal">UI 원클릭 재시도</span>
+      <span class="chip chip-slate">커스텀 프롬프트 지원</span>
+    </div>
+  </section>
+
+  <!-- ============================================================ WORKFLOW SVG -->
+  <section>
+    <div class="section-title">시스템 워크플로우</div>
+    <div class="svg-container">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1300 720" style="width: 100%; height: auto; display: block;">
+  <defs>
+    <marker id="arr" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#64748b"/>
+    </marker>
+    <marker id="arr-red" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#ef4444"/>
+    </marker>
+    <marker id="arr-green" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#16a34a"/>
+    </marker>
+    <filter id="sh" x="-5%" y="-5%" width="115%" height="130%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#00000022"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1300" height="720" fill="#f1f5f9"/>
+
+  <!-- ===== HEADER ===== -->
+  <rect x="0" y="0" width="1300" height="88" fill="#1e3a5f"/>
+  <text x="650" y="38" fill="white" font-size="24" font-weight="bold" text-anchor="middle" font-family="'Malgun Gothic','Apple SD Gothic Neo',sans-serif">PDF 번역·요약 시스템 워크플로우</text>
+  <text x="650" y="66" fill="#90b4d4" font-size="13" text-anchor="middle" font-family="'Malgun Gothic','Apple SD Gothic Neo',sans-serif">다국어 PDF (EN / ZH / JA) → 한국어 번역 + Map-Reduce 요약 + LoRA 학습 데이터 수집  ·  Spring Boot 4.0.6 + vLLM + PostgreSQL</text>
+
+  <!-- ===== FEATURE CHIPS ===== -->
+  <rect x="30"  y="100" width="145" height="28" rx="14" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="102" y="118" fill="#1e40af" font-size="11" font-weight="bold" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">SHA-256 중복 방지</text>
+
+  <rect x="185" y="100" width="165" height="28" rx="14" fill="#dcfce7" stroke="#16a34a" stroke-width="1.5"/>
+  <text x="268" y="118" fill="#14532d" font-size="11" font-weight="bold" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">비관적 락 (FOR UPDATE)</text>
+
+  <rect x="360" y="100" width="175" height="28" rx="14" fill="#fef3c7" stroke="#d97706" stroke-width="1.5"/>
+  <text x="447" y="118" fill="#92400e" font-size="11" font-weight="bold" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">Stale 30분 초과 → FAILED</text>
+
+  <rect x="545" y="100" width="145" height="28" rx="14" fill="#f3e8ff" stroke="#9333ea" stroke-width="1.5"/>
+  <text x="618" y="118" fill="#6b21a8" font-size="11" font-weight="bold" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">UI 원클릭 재시도</text>
+
+  <rect x="700" y="100" width="145" height="28" rx="14" fill="#fef9c3" stroke="#ca8a04" stroke-width="1.5"/>
+  <text x="773" y="118" fill="#713f12" font-size="11" font-weight="bold" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">@Async 비동기 처리</text>
+
+  <rect x="855" y="100" width="150" height="28" rx="14" fill="#fde8ff" stroke="#c026d3" stroke-width="1.5"/>
+  <text x="930" y="118" fill="#86198f" font-size="11" font-weight="bold" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">Gemini→LOCAL Fallback</text>
+
+  <rect x="1015" y="100" width="145" height="28" rx="14" fill="#f5f3ff" stroke="#7c3aed" stroke-width="1.5"/>
+  <text x="1087" y="118" fill="#4c1d95" font-size="11" font-weight="bold" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">LoRA 학습 데이터</text>
+
+  <!-- ===== ASYNC BACKGROUND ===== -->
+  <rect x="394" y="130" width="676" height="235" rx="8" fill="#fffbf5" stroke="#fcd9a7" stroke-width="1.5" stroke-dasharray="6,4"/>
+  <text x="732" y="146" fill="#b45309" font-size="11" font-weight="bold" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">백그라운드 처리 — pdfTaskExecutor (core=2, max=4)</text>
+
+  <!-- ===== MAIN STEPS (y=155, h=90) ===== -->
+
+  <!-- STEP 1: 웹 UI -->
+  <rect x="30"  y="155" width="105" height="90" rx="8" fill="#3b82f6" filter="url(#sh)"/>
+  <circle cx="47" cy="171" r="11" fill="white"/>
+  <text x="47"  y="176" fill="#3b82f6" font-size="12" font-weight="bold" text-anchor="middle">1</text>
+  <text x="82"  y="196" fill="white" font-size="12" font-weight="bold" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">웹 UI</text>
+  <text x="82"  y="211" fill="#bfdbfe" font-size="10" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">PDF 업로드</text>
+  <text x="82"  y="225" fill="#93c5fd" font-size="9"  text-anchor="middle" font-family="'Malgun Gothic',sans-serif">Thymeleaf</text>
+  <line x1="135" y1="200" x2="153" y2="200" stroke="#64748b" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- STEP 2: 중복 체크 -->
+  <rect x="155" y="155" width="105" height="90" rx="8" fill="#1d4ed8" filter="url(#sh)"/>
+  <circle cx="172" cy="171" r="11" fill="white"/>
+  <text x="172" y="176" fill="#1d4ed8" font-size="12" font-weight="bold" text-anchor="middle">2</text>
+  <text x="207" y="192" fill="white" font-size="12" font-weight="bold" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">중복 체크</text>
+  <text x="207" y="207" fill="#bfdbfe" font-size="10" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">SHA-256 Hash</text>
+  <text x="207" y="221" fill="#bfdbfe" font-size="10" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">비관적 락</text>
+  <text x="207" y="235" fill="#93c5fd" font-size="9"  text-anchor="middle" font-family="'Malgun Gothic',sans-serif">→ CACHED 반환</text>
+  <line x1="260" y1="200" x2="278" y2="200" stroke="#64748b" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- STEP 3: 텍스트 추출 -->
+  <rect x="280" y="155" width="105" height="90" rx="8" fill="#059669" filter="url(#sh)"/>
+  <circle cx="297" cy="171" r="11" fill="white"/>
+  <text x="297" y="176" fill="#059669" font-size="12" font-weight="bold" text-anchor="middle">3</text>
+  <text x="332" y="193" fill="white" font-size="12" font-weight="bold" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">텍스트 추출</text>
+  <text x="332" y="208" fill="#a7f3d0" font-size="10" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">Apache PDFBox</text>
+  <text x="332" y="222" fill="#a7f3d0" font-size="10" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">3.0.2</text>
+
+  <!-- HTTP 즉시 반환 표시 -->
+  <line x1="385" y1="200" x2="403" y2="200" stroke="#64748b" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="390" y1="154" x2="390" y2="180" stroke="#ca8a04" stroke-width="1.5" stroke-dasharray="3,3"/>
+  <polygon points="386,154 394,154 390,148" fill="#ca8a04"/>
+  <text x="353" y="144" fill="#92400e" font-size="10" font-weight="bold" font-family="'Malgun Gothic',sans-serif">HTTP 즉시 반환</text>
+
+  <!-- STEP 4: 청크 분할 -->
+  <rect x="405" y="155" width="105" height="90" rx="8" fill="#0d9488" filter="url(#sh)"/>
+  <circle cx="422" cy="171" r="11" fill="white"/>
+  <text x="422" y="176" fill="#0d9488" font-size="12" font-weight="bold" text-anchor="middle">4</text>
+  <text x="457" y="191" fill="white" font-size="12" font-weight="bold" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">청크 분할</text>
+  <text x="457" y="206" fill="#99f6e4" font-size="10" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">최대 2500자</text>
+  <text x="457" y="220" fill="#99f6e4" font-size="10" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">300자 오버랩</text>
+  <text x="457" y="234" fill="#99f6e4" font-size="9"  text-anchor="middle" font-family="'Malgun Gothic',sans-serif">문단 경계 기준</text>
+  <line x1="510" y1="200" x2="528" y2="200" stroke="#64748b" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- STEP 5: LLM 번역 -->
+  <rect x="530" y="155" width="115" height="90" rx="8" fill="#d97706" filter="url(#sh)"/>
+  <circle cx="548" cy="171" r="11" fill="white"/>
+  <text x="548" y="176" fill="#d97706" font-size="12" font-weight="bold" text-anchor="middle">5</text>
+  <text x="588" y="191" fill="white" font-size="12" font-weight="bold" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">LLM 번역</text>
+  <text x="588" y="206" fill="#fde68a" font-size="10" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">provider 라우팅</text>
+  <text x="588" y="220" fill="#fde68a" font-size="10" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">EN / ZH / JA</text>
+  <text x="588" y="234" fill="#fde68a" font-size="9"  text-anchor="middle" font-family="'Malgun Gothic',sans-serif">fallback 포함</text>
+  <line x1="645" y1="200" x2="663" y2="200" stroke="#64748b" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- STEP 6: Map-Reduce 요약 -->
+  <rect x="665" y="155" width="115" height="90" rx="8" fill="#7c3aed" filter="url(#sh)"/>
+  <circle cx="683" cy="171" r="11" fill="white"/>
+  <text x="683" y="176" fill="#7c3aed" font-size="12" font-weight="bold" text-anchor="middle">6</text>
+  <text x="722" y="189" fill="white" font-size="12" font-weight="bold" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">Map-Reduce</text>
+  <text x="722" y="204" fill="white" font-size="12" font-weight="bold" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">요약</text>
+  <text x="722" y="219" fill="#ddd6fe" font-size="10" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">소요약 concur=4</text>
+  <text x="722" y="233" fill="#ddd6fe" font-size="9"  text-anchor="middle" font-family="'Malgun Gothic',sans-serif">→ 최종 통합 요약</text>
+  <line x1="780" y1="200" x2="798" y2="200" stroke="#64748b" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- STEP 7: DB 저장 -->
+  <rect x="800" y="155" width="115" height="90" rx="8" fill="#0f766e" filter="url(#sh)"/>
+  <circle cx="818" cy="171" r="11" fill="white"/>
+  <text x="818" y="176" fill="#0f766e" font-size="12" font-weight="bold" text-anchor="middle">7</text>
+  <text x="857" y="192" fill="white" font-size="12" font-weight="bold" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">DB 저장</text>
+  <text x="857" y="207" fill="#99f6e4" font-size="10" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">PostgreSQL</text>
+  <text x="857" y="221" fill="#99f6e4" font-size="10" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">llm_provider 기록</text>
+  <text x="857" y="235" fill="#99f6e4" font-size="9"  text-anchor="middle" font-family="'Malgun Gothic',sans-serif">학습 데이터 축적</text>
+  <line x1="915" y1="200" x2="933" y2="200" stroke="#64748b" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- STEP 8: 상태 관리 -->
+  <rect x="935" y="155" width="115" height="90" rx="8" fill="#475569" filter="url(#sh)"/>
+  <circle cx="953" cy="171" r="11" fill="white"/>
+  <text x="953" y="176" fill="#475569" font-size="12" font-weight="bold" text-anchor="middle">8</text>
+  <text x="992" y="192" fill="white" font-size="12" font-weight="bold" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">상태 관리</text>
+  <text x="992" y="207" fill="#cbd5e1" font-size="10" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">DONE / FAILED</text>
+  <text x="992" y="221" fill="#cbd5e1" font-size="10" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">CACHED / PENDING</text>
+  <text x="992" y="235" fill="#94a3b8" font-size="9"  text-anchor="middle" font-family="'Malgun Gothic',sans-serif">@Scheduled 자동복구</text>
+
+  <!-- ===== DETAIL BOX: 번역 LLM 라우팅 ===== -->
+  <polyline points="588,245 588,253 551,253 551,262" fill="none" stroke="#d97706" stroke-width="1.5"/>
+  <rect x="468" y="262" width="166" height="100" rx="6" fill="#fff7ed" stroke="#d97706" stroke-width="1.5" filter="url(#sh)"/>
+  <text x="551" y="280" fill="#92400e" font-size="11" font-weight="bold" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">LLM 라우팅 우선순위</text>
+  <text x="551" y="298" fill="#9a3412" font-size="10" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">1순위: Gemini / Claude API</text>
+  <text x="551" y="316" fill="#9a3412" font-size="10" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">Quota 소진 시 → LOCAL</text>
+  <text x="551" y="334" fill="#b45309" font-size="9"  text-anchor="middle" font-family="'Malgun Gothic',sans-serif">EN→EXAONE / ZH·JA→Qwen</text>
+  <text x="551" y="352" fill="#b45309" font-size="9"  text-anchor="middle" font-family="'Malgun Gothic',sans-serif">concurrency: 외부=1 / 내부=10</text>
+
+  <!-- ===== DETAIL BOX: Map-Reduce ===== -->
+  <line x1="722" y1="245" x2="722" y2="262" stroke="#7c3aed" stroke-width="1.5"/>
+  <rect x="644" y="262" width="156" height="100" rx="6" fill="#f5f3ff" stroke="#7c3aed" stroke-width="1.5" filter="url(#sh)"/>
+  <text x="722" y="280" fill="#4c1d95" font-size="11" font-weight="bold" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">Map-Reduce 구조</text>
+  <text x="722" y="298" fill="#4c1d95" font-size="10" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">Map: 소요약 concur=4</text>
+  <text x="722" y="316" fill="#4c1d95" font-size="10" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">3문장 고정 (500 tokens)</text>
+  <text x="722" y="334" fill="#6d28d9" font-size="9"  text-anchor="middle" font-family="'Malgun Gothic',sans-serif">Reduce: 최종 요약 1500 tokens</text>
+  <text x="722" y="352" fill="#6d28d9" font-size="9"  text-anchor="middle" font-family="'Malgun Gothic',sans-serif">합산 입력 최대 4000자</text>
+
+  <!-- ===== TRAINING DATA EXPORT BOX ===== -->
+  <polyline points="857,245 857,253 888,253 888,262" fill="none" stroke="#0f766e" stroke-width="1.5"/>
+  <rect x="810" y="262" width="156" height="100" rx="6" fill="#f0fdfa" stroke="#0f766e" stroke-width="1.5" filter="url(#sh)"/>
+  <text x="888" y="280" fill="#134e4a" font-size="11" font-weight="bold" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">LoRA 학습 데이터</text>
+  <text x="888" y="298" fill="#0f766e" font-size="10" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">llm_provider=GEMINI/CLAUDE</text>
+  <text x="888" y="316" fill="#0f766e" font-size="10" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">→ Alpaca 형식 JSONL</text>
+  <text x="888" y="334" fill="#0d9488" font-size="9"  text-anchor="middle" font-family="'Malgun Gothic',sans-serif">GET /training/export</text>
+  <text x="888" y="352" fill="#0d9488" font-size="9"  text-anchor="middle" font-family="'Malgun Gothic',sans-serif">→ GB10 파인튜닝 입력</text>
+
+  <!-- ===== GEMINI FALLBACK FLOW ===== -->
+  <rect x="30" y="368" width="1240" height="110" rx="10" fill="#fdf4ff" stroke="#c026d3" stroke-width="1.5" stroke-dasharray="6,3"/>
+  <text x="650" y="386" fill="#86198f" font-size="12" font-weight="bold" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">Gemini → LOCAL 자동 Fallback 흐름</text>
+
+  <!-- Fallback boxes -->
+  <rect x="55"  y="394" width="155" height="75" rx="7" fill="#fef9c3" stroke="#f59e0b" stroke-width="1.5"/>
+  <text x="133" y="418" fill="#92400e" font-size="12" font-weight="bold" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">Gemini API 호출</text>
+  <text x="133" y="433" fill="#9a3412" font-size="10" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">primary provider</text>
+  <text x="133" y="450" fill="#b45309" font-size="9"  text-anchor="middle" font-family="'Malgun Gothic',sans-serif">concurrency=1</text>
+  <line x1="210" y1="428" x2="230" y2="428" stroke="#64748b" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <rect x="232" y="394" width="155" height="75" rx="7" fill="#fee2e2" stroke="#ef4444" stroke-width="1.5"/>
+  <text x="310" y="414" fill="#991b1b" font-size="12" font-weight="bold" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">429 감지</text>
+  <text x="310" y="429" fill="#991b1b" font-size="10" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">5회 지수 백오프</text>
+  <text x="310" y="443" fill="#b91c1c" font-size="9"  text-anchor="middle" font-family="'Malgun Gothic',sans-serif">10s → 60s max</text>
+  <text x="310" y="456" fill="#b91c1c" font-size="9"  text-anchor="middle" font-family="'Malgun Gothic',sans-serif">재시도</text>
+  <line x1="387" y1="428" x2="407" y2="428" stroke="#64748b" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <rect x="409" y="394" width="155" height="75" rx="7" fill="#fef3c7" stroke="#d97706" stroke-width="1.5"/>
+  <text x="487" y="414" fill="#92400e" font-size="12" font-weight="bold" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">Quota 소진 판정</text>
+  <text x="487" y="429" fill="#9a3412" font-size="10" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">최종 실패 → 플래그 ON</text>
+  <text x="487" y="443" fill="#b45309" font-size="9"  text-anchor="middle" font-family="'Malgun Gothic',sans-serif">1시간 캐시 유지</text>
+  <text x="487" y="456" fill="#b45309" font-size="9"  text-anchor="middle" font-family="'Malgun Gothic',sans-serif">이후 요청 즉시 전환</text>
+  <line x1="564" y1="428" x2="584" y2="428" stroke="#64748b" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <rect x="586" y="394" width="155" height="75" rx="7" fill="#ccfbf1" stroke="#0d9488" stroke-width="1.5"/>
+  <text x="664" y="414" fill="#065f46" font-size="12" font-weight="bold" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">LOCAL 전환</text>
+  <text x="664" y="429" fill="#0f766e" font-size="10" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">VllmService 사용</text>
+  <text x="664" y="443" fill="#0f766e" font-size="9"  text-anchor="middle" font-family="'Malgun Gothic',sans-serif">EN→EXAONE 32B</text>
+  <text x="664" y="456" fill="#0f766e" font-size="9"  text-anchor="middle" font-family="'Malgun Gothic',sans-serif">ZH·JA→Qwen 14B</text>
+  <line x1="741" y1="428" x2="761" y2="428" stroke="#64748b" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <rect x="763" y="394" width="155" height="75" rx="7" fill="#dcfce7" stroke="#16a34a" stroke-width="1.5"/>
+  <text x="841" y="414" fill="#14532d" font-size="12" font-weight="bold" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">서비스 정상 유지</text>
+  <text x="841" y="429" fill="#166534" font-size="10" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">무중단 처리</text>
+  <text x="841" y="443" fill="#15803d" font-size="9"  text-anchor="middle" font-family="'Malgun Gothic',sans-serif">다음날 자정 Quota 리셋</text>
+  <text x="841" y="456" fill="#15803d" font-size="9"  text-anchor="middle" font-family="'Malgun Gothic',sans-serif">→ 자동으로 Gemini 재사용</text>
+  <line x1="918" y1="428" x2="938" y2="428" stroke="#64748b" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <rect x="940" y="394" width="300" height="75" rx="7" fill="#f0f9ff" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="1090" y="414" fill="#1e3a5f" font-size="11" font-weight="bold" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">커스텀 프롬프트 지원</text>
+  <text x="1090" y="429" fill="#1d4ed8" font-size="10" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">업로드 시 번역·요약 프롬프트 직접 입력</text>
+  <text x="1090" y="443" fill="#2563eb" font-size="9"  text-anchor="middle" font-family="'Malgun Gothic',sans-serif">translatePrompt / summaryPrompt (선택)</text>
+  <text x="1090" y="456" fill="#3b82f6" font-size="9"  text-anchor="middle" font-family="'Malgun Gothic',sans-serif">미입력 시 하드코딩 기본값 사용</text>
+
+  <!-- ===== INFRASTRUCTURE ===== -->
+  <rect x="30" y="494" width="1240" height="175" rx="10" fill="white" stroke="#e2e8f0" stroke-width="1.5" filter="url(#sh)"/>
+  <text x="650" y="516" fill="#374151" font-size="13" font-weight="bold" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">인프라 구성</text>
+
+  <!-- vLLM EXAONE -->
+  <rect x="50"  y="528" width="255" height="125" rx="8" fill="#fff7ed" stroke="#d97706" stroke-width="2"/>
+  <text x="178" y="550" fill="#92400e" font-size="12" font-weight="bold" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">vLLM EXAONE 3.5 32B AWQ</text>
+  <text x="178" y="567" fill="#b45309" font-size="11" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">DGX Spark GB10 (:8001)</text>
+  <text x="178" y="583" fill="#b45309" font-size="11" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">EN 번역 전용 · LOCAL fallback</text>
+  <text x="178" y="599" fill="#d97706" font-size="10" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">메모리 125GB · WebClient 60s+</text>
+  <text x="178" y="614" fill="#d97706" font-size="10" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">OpenAI 호환 API</text>
+  <text x="178" y="631" fill="#b45309" font-size="9"  text-anchor="middle" font-family="'Malgun Gothic',sans-serif">concurrency: 번역=10 / 요약=4</text>
+
+  <!-- vLLM Qwen -->
+  <rect x="320" y="528" width="255" height="125" rx="8" fill="#fffbeb" stroke="#f59e0b" stroke-width="2"/>
+  <text x="448" y="550" fill="#78350f" font-size="12" font-weight="bold" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">vLLM Qwen 2.5 14B</text>
+  <text x="448" y="567" fill="#b45309" font-size="11" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">DGX Spark GB10 (:8000)</text>
+  <text x="448" y="583" fill="#b45309" font-size="11" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">ZH·JA 번역 + 요약 · LOCAL fallback</text>
+  <text x="448" y="599" fill="#d97706" font-size="10" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">OpenAI 호환 API</text>
+  <text x="448" y="614" fill="#d97706" font-size="10" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">summary-concurrency=4</text>
+  <text x="448" y="631" fill="#b45309" font-size="9"  text-anchor="middle" font-family="'Malgun Gothic',sans-serif">최종 요약 Reduce 전담</text>
+
+  <!-- Gemini / Claude -->
+  <rect x="590" y="528" width="255" height="125" rx="8" fill="#fdf4ff" stroke="#c026d3" stroke-width="2"/>
+  <text x="718" y="548" fill="#86198f" font-size="12" font-weight="bold" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">Gemini / Claude API</text>
+  <text x="718" y="563" fill="#86198f" font-size="10" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">Google Cloud / Anthropic Cloud</text>
+  <text x="718" y="579" fill="#9333ea" font-size="11" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">학습 데이터 수집 (Teacher)</text>
+  <text x="718" y="595" fill="#7c3aed" font-size="10" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">Gemini: 500 RPD 무료 · 15 RPM</text>
+  <text x="718" y="611" fill="#7c3aed" font-size="10" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">Claude: claude-sonnet-4-6</text>
+  <text x="718" y="627" fill="#a855f7" font-size="9"  text-anchor="middle" font-family="'Malgun Gothic',sans-serif">Quota 소진 → GB10 자동 전환</text>
+  <text x="718" y="641" fill="#a855f7" font-size="9"  text-anchor="middle" font-family="'Malgun Gothic',sans-serif">재시도: 지수 백오프 5회 (10s~60s)</text>
+
+  <!-- PostgreSQL -->
+  <rect x="860" y="528" width="255" height="125" rx="8" fill="#f0fdf4" stroke="#16a34a" stroke-width="2"/>
+  <text x="988" y="550" fill="#14532d" font-size="12" font-weight="bold" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">PostgreSQL</text>
+  <text x="988" y="567" fill="#166534" font-size="11" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">DGX Spark GB10 (Docker)</text>
+  <text x="988" y="583" fill="#166534" font-size="11" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">원문·번역·요약·llm_provider</text>
+  <text x="988" y="599" fill="#166534" font-size="11" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">status·processingTimeSec</text>
+  <text x="988" y="615" fill="#15803d" font-size="10" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">Spring Data JPA + 비관적 락</text>
+  <text x="988" y="631" fill="#15803d" font-size="9"  text-anchor="middle" font-family="'Malgun Gothic',sans-serif">GET /training/export → LoRA 학습</text>
+
+  <!-- Spring Boot -->
+  <rect x="1130" y="528" width="125" height="125" rx="8" fill="#f0f9ff" stroke="#3b82f6" stroke-width="2"/>
+  <text x="1192" y="550" fill="#1e3a5f" font-size="12" font-weight="bold" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">Spring Boot</text>
+  <text x="1192" y="567" fill="#1e40af" font-size="10" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">로컬 PC (Docker)</text>
+  <text x="1192" y="583" fill="#1e40af" font-size="10" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">:8880</text>
+  <text x="1192" y="599" fill="#1d4ed8" font-size="10" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">4.0.6 / Kotlin</text>
+  <text x="1192" y="615" fill="#1d4ed8" font-size="10" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">core=2 / max=4</text>
+  <text x="1192" y="631" fill="#2563eb" font-size="9"  text-anchor="middle" font-family="'Malgun Gothic',sans-serif">volume mount</text>
+
+  <!-- ===== BOTTOM BAR ===== -->
+  <rect x="0" y="672" width="1300" height="48" fill="#0f172a"/>
+  <text x="650" y="701" fill="#64748b" font-size="12" text-anchor="middle" font-family="'Malgun Gothic',sans-serif">Spring Boot 4.0.6 · Kotlin 2.2.21 · Spring Data JPA · WebClient (Project Reactor) · Thymeleaf · Apache PDFBox 3.0.2 · Gradle Kotlin DSL</text>
+</svg>
+    </div>
+  </section>
+
+  <!-- ============================================================ LLM PROVIDERS -->
+  <section>
+    <div class="section-title">LLM 제공자 비교</div>
+    <div class="provider-grid">
+
+      <div class="provider-card gemini">
+        <div class="provider-icon">✨</div>
+        <div class="provider-name" style="color:#92400e;">Google Gemini</div>
+        <div class="provider-sub">gemini-3.1-flash-lite</div>
+        <div class="provider-badges">
+          <span class="badge badge-yellow">무료 500 RPD</span>
+          <span class="badge badge-yellow">15 RPM</span>
+          <span class="badge badge-yellow">학습 데이터 수집</span>
+          <span class="badge badge-yellow">Quota 소진 시 LOCAL 전환</span>
+        </div>
+      </div>
+
+      <div class="provider-card claude">
+        <div class="provider-icon">🤖</div>
+        <div class="provider-name" style="color:#6b21a8;">Anthropic Claude</div>
+        <div class="provider-sub">claude-sonnet-4-6</div>
+        <div class="provider-badges">
+          <span class="badge badge-purple">고품질 Teacher</span>
+          <span class="badge badge-purple">학습 데이터 수집</span>
+          <span class="badge badge-purple">유료 API</span>
+        </div>
+      </div>
+
+      <div class="provider-card local">
+        <div class="provider-icon">🖥️</div>
+        <div class="provider-name" style="color:#065f46;">LOCAL (GB10)</div>
+        <div class="provider-sub">EXAONE 3.5 32B / Qwen 2.5 14B</div>
+        <div class="provider-badges">
+          <span class="badge badge-teal">무제한</span>
+          <span class="badge badge-teal">EN → EXAONE</span>
+          <span class="badge badge-teal">ZH·JA → Qwen</span>
+          <span class="badge badge-teal">Fallback 대상</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ FALLBACK -->
+  <section>
+    <div class="section-title">Gemini → LOCAL 자동 Fallback</div>
+    <div class="card">
+      <p style="font-size:13px; color:var(--muted); margin-bottom:20px;">
+        Gemini API 일일 할당량(500 RPD) 소진 시 자동으로 GB10 로컬 모델로 전환되어 서비스 중단 없이 처리됩니다.
+      </p>
+      <div class="fallback-diagram" style="gap:8px; margin-bottom:20px;">
+        <div class="fb-box" style="background:#fef3c7; color:#92400e;">
+          Gemini API 호출
+          <div class="fb-label">primary</div>
+        </div>
+        <span class="fb-arrow">→</span>
+        <div class="fb-box" style="background:#fee2e2; color:#991b1b;">
+          429 / Quota<br>소진 감지
+          <div class="fb-label">5회 재시도 후</div>
+        </div>
+        <span class="fb-arrow">→</span>
+        <div class="fb-box" style="background:#fef9c3; color:#713f12;">
+          QuotaExhausted<br>상태 플래그 ON
+          <div class="fb-label">1시간 캐시</div>
+        </div>
+        <span class="fb-arrow">→</span>
+        <div class="fb-box" style="background:#ccfbf1; color:#065f46;">
+          LOCAL vLLM<br>으로 처리
+          <div class="fb-label">자동 전환</div>
+        </div>
+        <span class="fb-arrow">→</span>
+        <div class="fb-box" style="background:#dcfce7; color:#14532d;">
+          서비스 정상<br>운영 유지
+          <div class="fb-label">무중단</div>
+        </div>
+      </div>
+      <div class="pipeline-code">
+        # 재시도 전략: 지수 백오프 5회 (10s → 60s max)<br>
+        # 최종 실패 시: LocalFallbackException → LOCAL VllmService로 자동 전환<br>
+        # 할당량 회복: 다음날 자정 Google 자동 리셋 → 다시 Gemini 우선 사용
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ CUSTOM PROMPT -->
+  <section>
+    <div class="section-title">커스텀 프롬프트 기능</div>
+    <div class="card">
+      <p style="font-size:13px; color:var(--muted); margin-bottom:16px;">
+        업로드 시 번역·요약 프롬프트를 직접 입력할 수 있습니다. 비워두면 시스템 기본 프롬프트가 동작합니다.
+      </p>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+        <div>
+          <p style="font-size:12px; font-weight:700; color:var(--slate); margin-bottom:8px;">번역 프롬프트 커스텀</p>
+          <div class="pipeline-code">
+            POST /api/pdf/upload<br>
+            translatePrompt: "법률 전문 번역, 조항 번호 유지..."<br>
+            → 기본 프롬프트 대신 사용자 지정 적용
+          </div>
+        </div>
+        <div>
+          <p style="font-size:12px; font-weight:700; color:var(--slate); margin-bottom:8px;">요약 프롬프트 커스텀</p>
+          <div class="pipeline-code">
+            POST /api/pdf/upload<br>
+            summaryPrompt: "특허 청구항 중심 3줄 요약..."<br>
+            → 비어 있으면 문서 유형 자동 판별 요약
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ TRAINING PIPELINE -->
+  <section>
+    <div class="section-title">LoRA 학습 데이터 파이프라인</div>
+    <div class="card">
+      <div class="pipeline">
+        <div class="pipeline-row">
+          <div class="pipeline-num">1</div>
+          <div class="pipeline-content">
+            <div class="pipeline-title">Gemini/Claude로 PDF 처리</div>
+            <div class="pipeline-desc">external-llm.provider=GEMINI → 번역·요약 결과가 llm_provider=GEMINI로 DB 저장</div>
+          </div>
+        </div>
+        <div class="pipeline-row">
+          <div class="pipeline-num">2</div>
+          <div class="pipeline-content">
+            <div class="pipeline-title">학습 데이터 내보내기</div>
+            <div class="pipeline-desc">DONE 상태 + llm_provider≠LOCAL 인 레코드를 Alpaca 형식 JSON으로 반환</div>
+            <div class="pipeline-code">curl http://localhost:8880/api/pdf/training/export &gt; training.json<br>cat training.json | jq -c '.[]' &gt; training.jsonl</div>
+          </div>
+        </div>
+        <div class="pipeline-row">
+          <div class="pipeline-num">3</div>
+          <div class="pipeline-content">
+            <div class="pipeline-title">GB10에서 LoRA 파인튜닝</div>
+            <div class="pipeline-desc">Unsloth / HuggingFace TRL로 EXAONE 3.5 32B / Qwen 2.5 14B 파인튜닝</div>
+            <div class="pipeline-code">python train.py --data training.jsonl --model EXAONE-3.5-32B --output ./lora-weights</div>
+          </div>
+        </div>
+        <div class="pipeline-row">
+          <div class="pipeline-num">4</div>
+          <div class="pipeline-content">
+            <div class="pipeline-title">LoRA 어댑터 적용 후 vLLM 재시작</div>
+            <div class="pipeline-desc">파인튜닝된 모델이 다음 요청부터 자동 적용</div>
+            <div class="pipeline-code">docker run ... vllm serve EXAONE-3.5-32B --enable-lora --lora-modules adapter=/path/to/lora-weights</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ INFRASTRUCTURE -->
+  <section>
+    <div class="section-title">인프라 구성</div>
+    <div class="infra-grid">
+      <div class="infra-card">
+        <h4><span class="infra-dot" style="background:#d97706;"></span>vLLM EXAONE 3.5 32B AWQ</h4>
+        <div class="infra-row"><span>위치</span><span class="infra-val">DGX Spark GB10 (:8001)</span></div>
+        <div class="infra-row"><span>역할</span><span class="infra-val">EN 번역 전용</span></div>
+        <div class="infra-row"><span>메모리</span><span class="infra-val">125GB GPU (VRAM)</span></div>
+        <div class="infra-row"><span>타임아웃</span><span class="infra-val">WebClient 60s+</span></div>
+        <div class="infra-row"><span>API</span><span class="infra-val">OpenAI 호환 /v1/chat/completions</span></div>
+      </div>
+      <div class="infra-card">
+        <h4><span class="infra-dot" style="background:#f59e0b;"></span>vLLM Qwen 2.5 14B</h4>
+        <div class="infra-row"><span>위치</span><span class="infra-val">DGX Spark GB10 (:8000)</span></div>
+        <div class="infra-row"><span>역할</span><span class="infra-val">ZH·JA 번역 + 소요약 + 최종요약</span></div>
+        <div class="infra-row"><span>요약 concurrency</span><span class="infra-val">4 (동시)</span></div>
+        <div class="infra-row"><span>summary-chunk</span><span class="infra-val">5000자</span></div>
+        <div class="infra-row"><span>API</span><span class="infra-val">OpenAI 호환 /v1/chat/completions</span></div>
+      </div>
+      <div class="infra-card">
+        <h4><span class="infra-dot" style="background:#16a34a;"></span>PostgreSQL</h4>
+        <div class="infra-row"><span>위치</span><span class="infra-val">DGX Spark GB10 (Docker)</span></div>
+        <div class="infra-row"><span>저장 데이터</span><span class="infra-val">원문·번역·요약·상태·llm_provider</span></div>
+        <div class="infra-row"><span>ORM</span><span class="infra-val">Spring Data JPA</span></div>
+        <div class="infra-row"><span>동시성</span><span class="infra-val">비관적 락 (FOR UPDATE)</span></div>
+      </div>
+      <div class="infra-card">
+        <h4><span class="infra-dot" style="background:#3b82f6;"></span>Spring Boot 앱</h4>
+        <div class="infra-row"><span>위치</span><span class="infra-val">로컬 PC (Docker, :8880)</span></div>
+        <div class="infra-row"><span>버전</span><span class="infra-val">Spring Boot 4.0.6 / Kotlin 2.2.21</span></div>
+        <div class="infra-row"><span>비동기 풀</span><span class="infra-val">core=2, max=4, queue=20</span></div>
+        <div class="infra-row"><span>설정</span><span class="infra-val">Docker volume mount (무재빌드)</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ API REFERENCE -->
+  <section>
+    <div class="section-title">API 명세</div>
+    <div class="card" style="padding:0; overflow:hidden;">
+      <table class="api-table">
+        <thead>
+          <tr>
+            <th>메서드</th>
+            <th>엔드포인트</th>
+            <th>설명</th>
+            <th>주요 파라미터</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="method method-post">POST</span></td>
+            <td><code>/api/pdf/upload</code></td>
+            <td>PDF 업로드 및 처리 시작</td>
+            <td><code>file</code>, <code>sourceLang</code>, <code>processMode</code>, <code>translatePrompt?</code>, <code>summaryPrompt?</code></td>
+          </tr>
+          <tr>
+            <td><span class="method method-get">GET</span></td>
+            <td><code>/api/pdf/list</code></td>
+            <td>전체 문서 목록 조회</td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <td><span class="method method-get">GET</span></td>
+            <td><code>/api/pdf/{id}</code></td>
+            <td>문서 상세 조회</td>
+            <td><code>id</code></td>
+          </tr>
+          <tr>
+            <td><span class="method method-post">POST</span></td>
+            <td><code>/api/pdf/retry/{id}</code></td>
+            <td>FAILED 문서 재처리</td>
+            <td><code>id</code></td>
+          </tr>
+          <tr>
+            <td><span class="method method-get">GET</span></td>
+            <td><code>/api/pdf/training/export</code></td>
+            <td>LoRA 학습 데이터 내보내기</td>
+            <td>Alpaca 형식 JSON 배열</td>
+          </tr>
+          <tr>
+            <td><span class="method method-get">GET</span></td>
+            <td><code>/download/{id}</code></td>
+            <td>번역본 PDF 다운로드</td>
+            <td><code>id</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============================================================ STATUS -->
+  <section>
+    <div class="section-title">문서 처리 상태 흐름</div>
+    <div class="card">
+      <div class="status-grid">
+        <div class="status-item">
+          <div class="status-dot" style="background:#94a3b8;"></div>
+          <div>
+            <strong>PENDING</strong><br>
+            <span style="font-size:11px; color:var(--muted);">업로드 직후 초기 상태</span>
+          </div>
+        </div>
+        <div class="status-item">
+          <div class="status-dot" style="background:#f59e0b;"></div>
+          <div>
+            <strong>PROCESSING</strong><br>
+            <span style="font-size:11px; color:var(--muted);">LLM 처리 중 (5초 폴링)</span>
+          </div>
+        </div>
+        <div class="status-item">
+          <div class="status-dot" style="background:#16a34a;"></div>
+          <div>
+            <strong>DONE</strong><br>
+            <span style="font-size:11px; color:var(--muted);">처리 완료, 조회 가능</span>
+          </div>
+        </div>
+        <div class="status-item">
+          <div class="status-dot" style="background:#ef4444;"></div>
+          <div>
+            <strong>FAILED</strong><br>
+            <span style="font-size:11px; color:var(--muted);">오류 발생, 재시도 가능</span>
+          </div>
+        </div>
+        <div class="status-item">
+          <div class="status-dot" style="background:#3b82f6;"></div>
+          <div>
+            <strong>CACHED</strong><br>
+            <span style="font-size:11px; color:var(--muted);">동일 파일 중복 업로드</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ TODO -->
+  <section>
+    <div class="section-title">완료 / 진행 중 작업</div>
+    <div class="card">
+      <ul class="todo-list">
+        <li>
+          <div class="todo-check todo-done"></div>
+          <div>
+            <strong>LlmService 인터페이스 + 다중 LLM 제공자 추상화</strong><br>
+            <span style="font-size:12px; color:var(--muted);">VllmService / ClaudeService / GeminiService 구현 완료</span>
+          </div>
+        </li>
+        <li>
+          <div class="todo-check todo-done"></div>
+          <div>
+            <strong>Gemini API Rate Limit 대응 (지수 백오프 재시도)</strong><br>
+            <span style="font-size:12px; color:var(--muted);">5회 재시도, 10s~60s 백오프, 무료 concurrency=1 설정 완료</span>
+          </div>
+        </li>
+        <li>
+          <div class="todo-check todo-done"></div>
+          <div>
+            <strong>LoRA 학습 데이터 수집 파이프라인</strong><br>
+            <span style="font-size:12px; color:var(--muted);">llm_provider 컬럼 + /training/export API 완료</span>
+          </div>
+        </li>
+        <li>
+          <div class="todo-check todo-done"></div>
+          <div>
+            <strong>Gemini → LOCAL 자동 Fallback</strong><br>
+            <span style="font-size:12px; color:var(--muted);">할당량 소진 시 GB10 로컬 모델 자동 전환</span>
+          </div>
+        </li>
+        <li>
+          <div class="todo-check todo-done"></div>
+          <div>
+            <strong>커스텀 프롬프트 기능</strong><br>
+            <span style="font-size:12px; color:var(--muted);">업로드 시 번역·요약 프롬프트 직접 입력 (미입력 시 기본값)</span>
+          </div>
+        </li>
+        <li>
+          <div class="todo-check"></div>
+          <div>
+            <strong>LoRA 파인튜닝 Python 스크립트 작성 (GB10)</strong><br>
+            <span style="font-size:12px; color:var(--muted);">Unsloth / TRL 기반, training.jsonl → 어댑터 가중치 생성</span>
+          </div>
+        </li>
+        <li>
+          <div class="todo-check"></div>
+          <div>
+            <strong>vLLM --gpu-memory-utilization 0.4 설정 (GB10)</strong><br>
+            <span style="font-size:12px; color:var(--muted);">docker-compose.yml 수정 → 파인튜닝 VRAM 확보</span>
+          </div>
+        </li>
+        <li>
+          <div class="todo-check"></div>
+          <div>
+            <strong>파인튜닝 모델 품질 평가 방법 정의</strong><br>
+            <span style="font-size:12px; color:var(--muted);">BLEU / COMET 측정 등</span>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <strong>PDF 번역·요약 시스템</strong> · Spring Boot 4.0.6 · Kotlin 2.2.21 · Spring Data JPA · WebClient (Project Reactor) · Thymeleaf · Apache PDFBox 3.0.2 · Gradle Kotlin DSL<br>
+  <span style="margin-top:6px; display:block;">Generated 2026-05-22</span>
+</footer>
+
+</body>
+</html>

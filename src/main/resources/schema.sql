@@ -16,3 +16,5 @@ ALTER TABLE pdf_document ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP;
 ALTER TABLE pdf_document ADD COLUMN IF NOT EXISTS processing_time_sec BIGINT;
 ALTER TABLE pdf_document ADD COLUMN IF NOT EXISTS process_mode VARCHAR(20) NOT NULL DEFAULT 'BOTH';
 ALTER TABLE pdf_document ADD COLUMN IF NOT EXISTS llm_provider VARCHAR(20) NOT NULL DEFAULT 'LOCAL';
+ALTER TABLE pdf_document ADD COLUMN IF NOT EXISTS custom_translate_prompt TEXT;
+ALTER TABLE pdf_document ADD COLUMN IF NOT EXISTS custom_summary_prompt TEXT;

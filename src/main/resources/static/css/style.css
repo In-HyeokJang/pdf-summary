@@ -38,6 +38,17 @@ select { border: 1px solid #d1d5db; border-radius: 7px; padding: 9px 12px; font-
 .btn-both:hover { background: #7c3aed; }
 .notice-time { font-size: 0.78rem; color: #9ca3af; margin-top: 8px; }
 
+/* ===== Index — Custom Prompt (collapsible) ===== */
+.prompt-advanced { margin-top: 14px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; }
+.prompt-toggle { list-style: none; padding: 10px 14px; font-size: 0.82rem; font-weight: 600; color: #64748b; cursor: pointer; background: #f8fafc; user-select: none; display: flex; align-items: center; gap: 6px; }
+.prompt-toggle::-webkit-details-marker { display: none; }
+.prompt-toggle::before { content: '▶'; font-size: 10px; transition: transform 0.2s; }
+details[open] .prompt-toggle::before { transform: rotate(90deg); }
+.prompt-fields { padding: 14px; display: flex; gap: 12px; flex-wrap: wrap; background: #fff; }
+.prompt-fields .form-group { flex: 1; min-width: 240px; }
+.prompt-fields textarea { border: 1px solid #d1d5db; border-radius: 7px; padding: 8px 10px; font-size: 0.82rem; width: 100%; resize: vertical; font-family: inherit; color: #334155; background: #fafafa; }
+.prompt-fields textarea:focus { outline: none; border-color: #3b82f6; background: #fff; }
+
 /* ===== Index — Upload Spinner ===== */
 .uploading { display: none; margin-top: 14px; color: #3b82f6; font-size: 0.88rem; font-weight: 600; }
 .uploading.active { display: flex; align-items: center; gap: 10px; }
